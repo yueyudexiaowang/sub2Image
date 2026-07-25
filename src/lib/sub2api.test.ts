@@ -130,7 +130,7 @@ describe('Sub2API 模型', () => {
     expect(fetcher.mock.calls[0][1]).toEqual(expect.objectContaining({ cache: 'no-store' }))
   })
 
-  it('使用用户 Key 读取所属分组的模型', async () => {
+  it('使用用户 Key 读取所属分组的模型并绕过缓存', async () => {
     const fetcher = vi.fn().mockResolvedValue(ok({
       object: 'list',
       data: [
@@ -144,8 +144,10 @@ describe('Sub2API 模型', () => {
       { id: 'gpt-5.4', object: 'model' },
       { id: 'gpt-image-2', object: 'model' },
     ])
-    expect(fetcher).toHaveBeenCalledWith('/sub2api-v1/models', {
+    expect(fetcher.mock.calls[0][0]).toMatch(/^\/sub2api-v1\/models\?t=\d+$/)
+    expect(fetcher.mock.calls[0][1]).toEqual({
       headers: { Authorization: 'Bearer sk-user' },
+      cache: 'no-store',
     })
   })
 })

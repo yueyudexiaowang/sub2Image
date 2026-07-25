@@ -202,8 +202,9 @@ export async function listSub2Keys() {
 }
 
 export async function listSub2Models(key: string) {
-  const res = await fetch('/sub2api-v1/models', {
+  const res = await fetch(`/sub2api-v1/models?t=${Date.now()}`, {
     headers: { Authorization: `Bearer ${key}` },
+    cache: 'no-store',
   })
   const data = await readJson(res) as Sub2ModelPage
   return Array.isArray(data.data) ? data.data : []
