@@ -178,9 +178,27 @@ export function logoutSub2() {
 }
 
 export async function listSub2Keys() {
-  const data = await authFetch(`keys?page=1&page_size=1000&t=${Date.now()}`, { cache: 'no-store' })
-  const items = Array.isArray(data) ? data : data?.items
-  return (Array.isArray(items) ? items : []) as Sub2Key[]
+  const items: Sub2Key[] = []
+  let page = 1
+  let pages = 1
+
+  while (page <= pages) {
+    const query = new URLSearchParams({
+      page: String(page),
+      page_size: '20',
+      sort_by: 'created_at',
+      sort_order: 'desc',
+      timezone: 'Asia/Shanghai',
+      t: String(Date.now()),
+    })
+    const data = await authFetch(`keys?${query}`, { cache: 'no-store' })
+    const pageItems = Array.isArray(data) ? data : data?.items
+    if (Array.isArray(pageItems)) items.push(...pageItems)
+    pages = Array.isArray(data) ? 1 : Number(data?.pages) || 1
+    page += 1
+  }
+
+  return items
 }
 
 export async function listSub2Models(key: string) {

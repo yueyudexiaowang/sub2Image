@@ -104,18 +104,29 @@ describe('Sub2API 登录', () => {
 })
 
 describe('Sub2API 模型', () => {
-  it('读取完整 Key 列表并穿透线上缓存', async () => {
-    const fetcher = vi.fn().mockResolvedValue(ok({
-      items: [{ id: 1, key: 'sk-user', name: '默认', status: 'active', group_id: 2 }],
-      total: 1,
-      page: 1,
-      page_size: 1000,
-      pages: 1,
-    }))
+  it('使用当前账号分页读取完整 Key 列表并穿透线上缓存', async () => {
+    values.set('image2.sub2api.token', 'account-token')
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(ok({
+        items: [{ id: 1, key: 'sk-user-1', name: '默认', status: 'active', group_id: 2 }],
+        total: 2,
+        page: 1,
+        page_size: 20,
+        pages: 2,
+      }))
+      .mockResolvedValueOnce(ok({
+        items: [{ id: 2, key: 'sk-user-2', name: '视频', status: 'active', group_id: 3 }],
+        total: 2,
+        page: 2,
+        page_size: 20,
+        pages: 2,
+      }))
     vi.stubGlobal('fetch', fetcher)
 
-    await expect(listSub2Keys()).resolves.toHaveLength(1)
-    expect(fetcher.mock.calls[0][0]).toMatch(/^\/sub2api-auth\/keys\?page=1&page_size=1000&t=\d+$/)
+    await expect(listSub2Keys()).resolves.toHaveLength(2)
+    expect(fetcher.mock.calls[0][0]).toMatch(/^\/sub2api-auth\/keys\?page=1&page_size=20&sort_by=created_at&sort_order=desc&timezone=Asia%2FShanghai&t=\d+$/)
+    expect(fetcher.mock.calls[1][0]).toMatch(/^\/sub2api-auth\/keys\?page=2&page_size=20&sort_by=created_at&sort_order=desc&timezone=Asia%2FShanghai&t=\d+$/)
+    expect(fetcher.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer account-token')
     expect(fetcher.mock.calls[0][1]).toEqual(expect.objectContaining({ cache: 'no-store' }))
   })
 
