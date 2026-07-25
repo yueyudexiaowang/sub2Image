@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getSub2PublicSettings,
+  listSub2Keys,
   listSub2Models,
   loginSub2,
   loginSub2TwoFactor,
@@ -103,6 +104,21 @@ describe('Sub2API 登录', () => {
 })
 
 describe('Sub2API 模型', () => {
+  it('读取完整 Key 列表并穿透线上缓存', async () => {
+    const fetcher = vi.fn().mockResolvedValue(ok({
+      items: [{ id: 1, key: 'sk-user', name: '默认', status: 'active', group_id: 2 }],
+      total: 1,
+      page: 1,
+      page_size: 1000,
+      pages: 1,
+    }))
+    vi.stubGlobal('fetch', fetcher)
+
+    await expect(listSub2Keys()).resolves.toHaveLength(1)
+    expect(fetcher.mock.calls[0][0]).toMatch(/^\/sub2api-auth\/keys\?page=1&page_size=1000&t=\d+$/)
+    expect(fetcher.mock.calls[0][1]).toEqual(expect.objectContaining({ cache: 'no-store' }))
+  })
+
   it('使用用户 Key 读取所属分组的模型', async () => {
     const fetcher = vi.fn().mockResolvedValue(ok({
       object: 'list',

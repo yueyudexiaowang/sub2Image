@@ -178,7 +178,7 @@ export function logoutSub2() {
 }
 
 export async function listSub2Keys() {
-  const data = await authFetch('keys?page=1&page_size=100')
+  const data = await authFetch(`keys?page=1&page_size=1000&t=${Date.now()}`, { cache: 'no-store' })
   const items = Array.isArray(data) ? data : data?.items
   return (Array.isArray(items) ? items : []) as Sub2Key[]
 }
