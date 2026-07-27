@@ -1,4 +1,4 @@
-import type { AgentConversation, AgentMessage, AgentRound, ResponsesOutputItem } from '../types'
+import type { AgentConversation, AgentMessage, AgentRound, AppSettings, ResponsesOutputItem } from '../types'
 import { normalizeSettings } from '../lib/apiProfiles'
 import { replaceAgentConversations } from '../lib/db'
 import { isRecord } from '../lib/object'
@@ -195,34 +195,39 @@ function stripPersistedAgentConversations(value: unknown): unknown {
   })
 }
 
+/**
+ * Sub2-only 不变量校验（幂等）：settings 的 sub2OnlyVersion 不匹配时重置为 Sub2 占位配置。
+ * 注意：必须在 merge（每次启动都执行）里调用，而不能只放在 persist 的 migrate 里——
+ * migrate 仅在持久化 version 变化时执行一次，version 已是最新的用户永远不会走到。
+ */
+export function ensureSub2OnlySettings(rawSettings: unknown): Record<string, unknown> {
+  const input = isRecord(rawSettings) ? rawSettings : {}
+  if (Number(input.sub2OnlyVersion) === SUB2_ONLY_VERSION) return input
+  const profile = createSub2PlaceholderProfile()
+  return {
+    ...input,
+    baseUrl: profile.baseUrl,
+    apiKey: '',
+    model: profile.model,
+    apiMode: 'images',
+    apiProxy: false,
+    customProviders: [],
+    sub2OnlyVersion: SUB2_ONLY_VERSION,
+    sub2Configs: [],
+    profiles: [profile],
+    activeProfileId: profile.id,
+    agentApiConfigMode: 'hybrid',
+    agentTextProfileId: null,
+    agentImageProfileId: null,
+    agentVideoProfileId: null,
+  }
+}
+
 export function migratePersistedState(persistedState: unknown): unknown {
   if (!isRecord(persistedState)) return persistedState
-  const rawSettings = isRecord(persistedState.settings) ? persistedState.settings : {}
-  const settings = Number(rawSettings.sub2OnlyVersion) === SUB2_ONLY_VERSION
-    ? rawSettings
-    : (() => {
-        const profile = createSub2PlaceholderProfile()
-        return {
-          ...rawSettings,
-          baseUrl: profile.baseUrl,
-          apiKey: '',
-          model: profile.model,
-          apiMode: 'images',
-          apiProxy: false,
-          customProviders: [],
-          sub2OnlyVersion: SUB2_ONLY_VERSION,
-          sub2Configs: [],
-          profiles: [profile],
-          activeProfileId: profile.id,
-          agentApiConfigMode: 'hybrid',
-          agentTextProfileId: null,
-          agentImageProfileId: null,
-          agentVideoProfileId: null,
-        }
-      })()
   return {
     ...persistedState,
-    settings,
+    settings: ensureSub2OnlySettings(persistedState.settings),
     agentConversations: stripPersistedAgentConversations(persistedState.agentConversations),
   }
 }
@@ -268,7 +273,8 @@ export function mergePersistedState(persistedState: unknown, currentState: AppSt
   if (!persistedState || typeof persistedState !== 'object') return currentState
 
   const persisted = persistedState as Partial<AppState>
-  const settings = normalizeSettings(persisted.settings ?? currentState.settings)
+  // 每次启动都做 Sub2-only 幂等校验，避免只依赖 migrate（version 不变时不会执行）
+  const settings = normalizeSettings(ensureSub2OnlySettings(persisted.settings ?? currentState.settings) as Partial<AppSettings> as AppSettings)
   const hasPersistedAgentConversations = Array.isArray(persisted.agentConversations)
   if (hasPersistedAgentConversations && normalizeAgentConversations(persisted.agentConversations).length > 0) {
     agentConversationPersistence.migrationPending = true

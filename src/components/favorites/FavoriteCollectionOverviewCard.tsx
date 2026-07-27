@@ -257,7 +257,7 @@ export function FavoriteCollectionOverviewCard({
               {!isVirtualAll && card.collection && (
                 <>
                   <FavoriteActionButton
-                    tooltip={isDefault ? '取消默认收藏夹' : '设为默认收藏夹'}
+                    tooltip={isDefault ? '取消默认素材集' : '设为默认素材集'}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleSetDefault(card.collection!)
@@ -290,7 +290,7 @@ export function FavoriteCollectionOverviewCard({
                     </FavoriteActionButton>
                   )}
                   <FavoriteActionButton
-                    tooltip={canDelete ? '删除收藏夹' : '至少保留一个收藏夹'}
+                    tooltip={canDelete ? '删除素材集' : '至少保留一个素材集'}
                     disabled={!canDelete}
                     onClick={(e) => {
                       e.stopPropagation()

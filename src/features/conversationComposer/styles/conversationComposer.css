@@ -689,48 +689,6 @@
   border-radius: 2px;
 }
 
-.cc-settings-model {
-  position: relative;
-  display: flex;
-  height: 34px;
-  align-items: center;
-  gap: 7px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background: rgba(218, 220, 224, 0.05);
-  color: #fff;
-  font-size: 12px;
-}
-
-.cc-settings-model select {
-  min-width: 0;
-  flex: 1;
-  height: 100%;
-  padding: 0 24px 0 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  appearance: none;
-  cursor: pointer;
-}
-
-.cc-settings-model select option {
-  background: #202124;
-  color: #fff;
-}
-
-.cc-settings-model svg {
-  position: absolute;
-  right: 10px;
-  pointer-events: none;
-}
-
-.cc-settings-model--empty {
-  color: rgba(255, 255, 255, 0.55);
-}
-
 .cc-settings-footnote {
   min-height: 51px;
   margin: 0;
@@ -1373,4 +1331,127 @@
 
 .dark .cc-transparent-preview > span {
   background-color: #1f2427;
+}
+
+/* 设置浮层内的模型选择区 */
+/* 单行布局：左侧「模型」标签 + 右侧触发器，不换行 */
+.cc-settings-model {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.cc-settings-model-label {
+  margin: 0 0 0 4px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cc-settings-model-trigger {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(218, 220, 224, 0.05);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cc-settings-model-trigger:hover {
+  background: rgba(218, 220, 224, 0.12);
+}
+
+.cc-settings-model-trigger svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 160ms ease-out;
+}
+
+.cc-settings-model-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 向上弹出的下拉面板：绝对定位覆盖在浮层内容之上，避免被 overflow 裁剪 */
+.cc-settings-model-list {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  padding: 4px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: rgba(38, 39, 42, 0.98);
+  box-shadow: inset 0 0 0 1px rgba(218, 220, 224, 0.08), 0 12px 24px -6px rgba(0, 0, 0, 0.6);
+}
+
+.cc-settings-model-list button {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cc-settings-model-list button:hover {
+  background: rgba(218, 220, 224, 0.1);
+}
+
+.cc-settings-model-list button.is-active {
+  background: #d3e97a;
+  color: #101204;
+}
+
+.cc-settings-model-hint {
+  margin: 0;
+  padding: 6px 8px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+}
+
+/* 分组分节：分组名作为不可点击的小节标题，模型项缩进一级 */
+.cc-settings-model-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cc-settings-model-group {
+  margin: 0;
+  padding: 7px 8px 3px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.cc-settings-model-section button {
+  padding-left: 16px;
 }

@@ -12,10 +12,23 @@ vi.mock('./lib/db', () => {
   const thumbnails = new Map<string, StoredImageThumbnail>()
   const agentConversations = new Map<string, AgentConversation>()
   const promptProjects = new Map<string, PromptProject>()
+  const canvasDocuments = new Map<string, { id: string }>()
   let imageSeq = 0
 
   return {
     CURRENT_THUMBNAIL_VERSION: 2,
+    getAllCanvasDocuments: async () => [...canvasDocuments.values()],
+    getCanvasDocument: async (id: string) => canvasDocuments.get(id) ?? null,
+    putCanvasDocument: async (doc: { id: string }) => {
+      canvasDocuments.set(doc.id, doc)
+      return doc.id
+    },
+    deleteCanvasDocument: async (id: string) => {
+      canvasDocuments.delete(id)
+    },
+    clearCanvasDocuments: async () => {
+      canvasDocuments.clear()
+    },
     getAllTasks: async () => [...tasks.values()],
     putTask: async (task: TaskRecord) => {
       tasks.set(task.id, task)
@@ -406,8 +419,8 @@ describe('composer draft commands', () => {
 })
 
 describe('favorite collection deletion', () => {
-  const collectionA = { id: 'collection-a', name: '收藏夹 A', createdAt: 1, updatedAt: 1 }
-  const collectionB = { id: 'collection-b', name: '收藏夹 B', createdAt: 1, updatedAt: 1 }
+  const collectionA = { id: 'collection-a', name: '素材集 A', createdAt: 1, updatedAt: 1 }
+  const collectionB = { id: 'collection-b', name: '素材集 B', createdAt: 1, updatedAt: 1 }
 
   beforeEach(async () => {
     await clearTasks()
@@ -2150,8 +2163,8 @@ describe('data import', () => {
   it('restores favorite collections and default collection when importing task data', async () => {
     await clearTasks()
     const importedCollections = [
-      { id: 'imported-collection-a', name: '导入收藏夹 A', createdAt: 1, updatedAt: 1 },
-      { id: 'imported-collection-b', name: '导入收藏夹 B', createdAt: 2, updatedAt: 2 },
+      { id: 'imported-collection-a', name: '导入素材集 A', createdAt: 1, updatedAt: 1 },
+      { id: 'imported-collection-b', name: '导入素材集 B', createdAt: 2, updatedAt: 2 },
     ]
     const importedTask = task({
       id: 'imported-favorite-task',

@@ -765,6 +765,49 @@ export async function callAgentResponsesApi(opts: {
   }
 }
 
+const CANVAS_TEXT_INSTRUCTIONS = '根据用户要求生成文本内容，直接输出正文，不要输出任何解释、前言或 Markdown 代码块标记。使用与用户要求一致的语言。'
+
+/** 通用文本生成（无限画布文本节点等场景）：直接调 Responses API 返回纯文本。 */
+export async function callAgentTextGenerationApi(opts: {
+  settings: AppSettings
+  profile: ApiProfile
+  prompt: string
+  signal?: AbortSignal
+}): Promise<string> {
+  const { settings, profile, prompt, signal } = opts
+  const proxyConfig = readClientDevProxyConfig()
+  const useApiProxy = shouldUseApiProxy(profile.apiProxy, proxyConfig)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), profile.timeout * 1000)
+  const abortFromCaller = () => controller.abort()
+  if (signal?.aborted) controller.abort()
+  signal?.addEventListener('abort', abortFromCaller, { once: true })
+
+  try {
+    const response = await fetch(buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy), {
+      method: 'POST',
+      headers: createHeaders(profile),
+      cache: 'no-store',
+      body: JSON.stringify({
+        model: profile.model || settings.model,
+        instructions: CANVAS_TEXT_INSTRUCTIONS,
+        input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }] }],
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response))
+    }
+
+    const payload = await response.json() as ResponsesApiResponse
+    return extractText(payload).trim()
+  } finally {
+    clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abortFromCaller)
+  }
+}
+
 export async function callAgentConversationTitleApi(opts: {
   settings: AppSettings
   profile: ApiProfile

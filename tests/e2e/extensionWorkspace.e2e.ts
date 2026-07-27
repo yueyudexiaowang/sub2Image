@@ -51,7 +51,8 @@ test('Skills 平铺展示开源来源和详情', async ({ page }) => {
   await expect(page.getByText(/把用户的商品需求转成清晰/)).toBeVisible()
 })
 
-test('Agent 对话只通过结构化 @ mention 手动选择一个 Skill', async ({ page }) => {
+// 对话功能暂时隐藏（顶部切换已指向无限画布），入口恢复后再启用本用例
+test.skip('Agent 对话只通过结构化 @ mention 手动选择一个 Skill', async ({ page }) => {
   await openApp(page)
   await page.getByRole('button', { name: '对话', exact: true }).click()
 

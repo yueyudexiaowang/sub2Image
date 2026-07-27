@@ -261,11 +261,11 @@ export function ManageCollectionsModal() {
     const collectionTasks = tasks.filter(t => getTaskFavoriteCollectionIds(t).includes(collection.id))
     const imageCount = new Set(collectionTasks.flatMap((task) => task.outputImages || [])).size
     setConfirmDialog({
-      title: '删除收藏夹',
-      message: `确定要删除收藏夹「${collection.name}」吗？`,
+      title: '删除素材集',
+      message: `确定要删除素材集「${collection.name}」吗？`,
       checkbox: imageCount > 0
         ? {
-            label: `同时删除收藏夹中的图片（${imageCount} 张）`,
+            label: `同时删除素材集中的图片（${imageCount} 张）`,
             tone: 'danger',
           }
         : undefined,
@@ -288,8 +288,8 @@ export function ManageCollectionsModal() {
       return
     }
     setConfirmDialog({
-      title: '修改默认收藏夹',
-      message: `确定要将默认收藏夹从「${current.name}」改为「${collection.name}」吗？`,
+      title: '修改默认素材集',
+      message: `确定要将默认素材集从「${current.name}」改为「${collection.name}」吗？`,
       action: () => setDefaultFavoriteCollectionId(collection.id),
     })
   }
@@ -303,16 +303,16 @@ export function ManageCollectionsModal() {
             <CloseIcon className="h-5 w-5" />
           </FavoriteActionButton>
           <h2 className="mb-2 pr-8 flex items-center gap-2.5 text-lg font-semibold text-gray-800 dark:text-gray-100 leading-snug">
-            管理收藏夹
+            管理素材集
           </h2>
           <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
-            在这里管理你的收藏夹列表及排序。
+            在这里管理你的素材集列表及排序。
           </p>
         </div>
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden pt-3 pb-1">
           <div className="flex-1 overflow-y-auto custom-scrollbar relative">
             {selectableCollections.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">暂无收藏夹</div>
+              <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">暂无素材集</div>
             ) : selectableCollections.map((collection) => {
               const isDefault = collection.id === defaultFavoriteCollectionId
               const canDelete = collections.length > 1
@@ -379,9 +379,9 @@ export function ManageCollectionsModal() {
                       </FavoriteActionButton>
                     ) : (
                       <>
-                        <FavoriteActionButton tooltip={isDefault ? '取消默认收藏夹' : '设为默认收藏夹'} onClick={(e) => handleSetDefault(e, collection)} className={`p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors ${isDefault ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400'}`}><FavoriteIcon filled={isDefault} className="w-3.5 h-3.5" /></FavoriteActionButton>
+                        <FavoriteActionButton tooltip={isDefault ? '取消默认素材集' : '设为默认素材集'} onClick={(e) => handleSetDefault(e, collection)} className={`p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors ${isDefault ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400'}`}><FavoriteIcon filled={isDefault} className="w-3.5 h-3.5" /></FavoriteActionButton>
                         <FavoriteActionButton tooltip="重命名" onClick={(e) => startRename(e, collection)} className="p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"><EditIcon className="w-3.5 h-3.5" /></FavoriteActionButton>
-                        <FavoriteActionButton tooltip={canDelete ? '删除' : '至少保留一个收藏夹'} disabled={!canDelete} onClick={(e) => handleDelete(e, collection)} className={`p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors ${canDelete ? 'text-gray-400 hover:text-red-500 dark:hover:text-red-400' : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'}`}><TrashIcon className="w-3.5 h-3.5" /></FavoriteActionButton>
+                        <FavoriteActionButton tooltip={canDelete ? '删除' : '至少保留一个素材集'} disabled={!canDelete} onClick={(e) => handleDelete(e, collection)} className={`p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-md transition-colors ${canDelete ? 'text-gray-400 hover:text-red-500 dark:hover:text-red-400' : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'}`}><TrashIcon className="w-3.5 h-3.5" /></FavoriteActionButton>
                       </>
                     )}
                   </div>
@@ -398,7 +398,7 @@ export function ManageCollectionsModal() {
                 if (event.key === 'Enter') handleCreate()
               }}
               type="text"
-              placeholder="新建收藏夹..."
+              placeholder="新建素材集..."
               className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-transparent px-4 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:text-white dark:focus:border-white/30 dark:focus:ring-white/30"
             />
             <button 

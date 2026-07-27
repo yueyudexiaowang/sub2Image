@@ -461,10 +461,11 @@ export const useStore = create<AppState>()(
         if (showSettings) dismissAllTooltips()
         set({
           showSettings,
-          ...(settingsTabRequest ? { settingsTabRequest: settingsTabRequest === 'api' ? 'sub2api' : settingsTabRequest } : {}),
+          ...(settingsTabRequest ? { settingsTabRequest } : {}),
           ...(!showSettings ? { settingsTabRequest: null } : {}),
         })
       },
+      clearSettingsTabRequest: () => set({ settingsTabRequest: null }),
       supportPromptOpen: false,
       supportPromptDismissed: false,
       supportPromptSkippedForImportedData: false,

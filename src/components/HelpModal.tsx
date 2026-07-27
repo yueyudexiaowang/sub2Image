@@ -83,14 +83,14 @@ export default function HelpModal({ appMode, isFavoriteCollectionOverview = fals
                   <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                   </svg>
-                  多选收藏夹
+                  多选素材集
                 </h4>
                 <div className="space-y-4">
                   {isMobile ? (
-                    <p>在收藏夹卡片上<strong className="text-blue-500 dark:text-blue-400 font-medium">左右滑动</strong>即可选中或取消选中该卡片。</p>
+                    <p>在素材集卡片上<strong className="text-blue-500 dark:text-blue-400 font-medium">左右滑动</strong>即可选中或取消选中该卡片。</p>
                   ) : (
                     <ul className="list-disc pl-4 space-y-2">
-                      <li>使用鼠标在空白处<strong className="text-blue-500 dark:text-blue-400 font-medium">拖拽框选</strong>收藏夹卡片。</li>
+                      <li>使用鼠标在空白处<strong className="text-blue-500 dark:text-blue-400 font-medium">拖拽框选</strong>素材集卡片。</li>
                       <li>按住 <kbd className="px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-sans">Ctrl</kbd> 或 <kbd className="px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-sans">⌘</kbd> 并点击卡片，可添加或移除单项。</li>
                       <li>再次框选已选中的卡片会将其取消选中。</li>
                       <li>点击卡片外任意空白处可取消所有选择。</li>
@@ -106,7 +106,7 @@ export default function HelpModal({ appMode, isFavoriteCollectionOverview = fals
                   批量操作
                 </h4>
                 <div className="space-y-4">
-                  <p>选中一个或多个收藏夹后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选收藏夹</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选收藏夹</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
+                  <p>选中一个或多个素材集后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选素材集</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选素材集</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
                 </div>
               </section>
             </>
@@ -131,7 +131,7 @@ export default function HelpModal({ appMode, isFavoriteCollectionOverview = fals
                   批量操作
                 </h4>
                 <div className="space-y-4">
-                  <p>选中一个或多个任务后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选任务</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选任务</strong>、<strong className="text-yellow-500 dark:text-yellow-400 font-medium">编辑收藏夹</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
+                  <p>选中一个或多个任务后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选任务</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选任务</strong>、<strong className="text-yellow-500 dark:text-yellow-400 font-medium">编辑素材集</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
                 </div>
               </section>
             </>
@@ -161,7 +161,7 @@ export default function HelpModal({ appMode, isFavoriteCollectionOverview = fals
                   批量操作
                 </h4>
                 <div className="space-y-4">
-                  <p>选中一个或多个任务后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选任务</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选任务</strong>、<strong className="text-yellow-500 dark:text-yellow-400 font-medium">编辑收藏夹</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
+                  <p>选中一个或多个任务后，页面底部会出现操作栏，支持<strong className="text-gray-500 dark:text-gray-400 font-medium">取消选择</strong>、<strong className="text-blue-500 dark:text-blue-400 font-medium">全选任务</strong>、<strong className="text-purple-500 dark:text-purple-400 font-medium">反选任务</strong>、<strong className="text-yellow-500 dark:text-yellow-400 font-medium">编辑素材集</strong>、<strong className="text-green-500 dark:text-green-400 font-medium">下载选中</strong>，和<strong className="text-red-500 dark:text-red-400 font-medium">删除选中</strong>。</p>
                 </div>
               </section>
             </>

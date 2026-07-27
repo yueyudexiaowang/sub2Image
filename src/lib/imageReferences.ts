@@ -1,6 +1,8 @@
 import type { PromptProject } from '../features/promptStudio'
+import type { CanvasDocument } from '../features/canvas/types'
 import type { AgentConversation, TaskRecord } from '../types'
-import { getAllPromptProjects } from './db'
+import { collectCanvasDocumentImageIds } from '../features/canvas/core/documents'
+import { getAllCanvasDocuments, getAllPromptProjects } from './db'
 
 type ImageRef = {
   id: string
@@ -60,9 +62,14 @@ export function addPromptProjectImageReferences(ids: Set<string>, projects: read
   }
 }
 
+export function addCanvasImageReferences(ids: Set<string>, docs: readonly CanvasDocument[]) {
+  collectCanvasDocumentImageIds(ids, docs)
+}
+
 export async function collectReferencedImageIds(
   state: ImageReferenceState,
   projects?: readonly PromptProject[],
+  canvasDocuments?: readonly CanvasDocument[],
 ) {
   const ids = new Set<string>()
 
@@ -76,5 +83,11 @@ export async function collectReferencedImageIds(
     ? projects
     : await getAllPromptProjects()
   addPromptProjectImageReferences(ids, savedProjects)
+
+  // 画布节点引用的图片必须计入，否则启动清理会误删画布内容。
+  const savedCanvasDocuments: readonly CanvasDocument[] = canvasDocuments
+    ? canvasDocuments
+    : await getAllCanvasDocuments()
+  addCanvasImageReferences(ids, savedCanvasDocuments)
   return ids
 }

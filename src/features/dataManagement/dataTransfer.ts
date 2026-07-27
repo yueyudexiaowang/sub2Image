@@ -1,17 +1,21 @@
 import { migratePromptProject, type PromptProject } from '../promptStudio'
 import { DEFAULT_PARAMS } from '../../types'
 import { DEFAULT_SETTINGS, mergeImportedSettings } from '../../lib/apiProfiles'
+import { syncSub2Settings } from '../../lib/sub2Profiles'
 import {
   clearAgentConversations,
+  clearCanvasDocuments,
   clearPromptProjects,
   clearTasks,
   clearVideos,
+  getAllCanvasDocuments,
   getAllImageIds,
   getAllImages,
   getAllPromptProjects,
   getAllTasks,
   getAllVideos,
   getImageThumbnail,
+  putCanvasDocument,
   putImage,
   putImageThumbnail,
   putPromptProject,
@@ -20,7 +24,9 @@ import {
 import { formatExportFileTime } from '../../lib/exportFileName'
 import { buildExportZip, readExportZip, readExportZipFileAsDataUrl } from '../../lib/exportZip'
 import { genId } from '../../lib/id'
-import { addAgentImageReferences, addPromptProjectImageReferences, addTaskImageReferences } from '../../lib/imageReferences'
+import { addAgentImageReferences, addCanvasImageReferences, addPromptProjectImageReferences, addTaskImageReferences } from '../../lib/imageReferences'
+import type { CanvasDocument } from '../canvas/types'
+import { collectCanvasDocumentVideoIds, normalizeCanvasDocument } from '../canvas/core/documents'
 import { isEmptyAgentConversation } from '../agent'
 import {
   ensureDefaultFavoriteCollection,
@@ -45,7 +51,7 @@ export interface ClearOptions {
 }
 
 export async function clearData(options: ClearOptions = { clearConfig: true, clearTasks: true, clearPromptProjects: true }) {
-  const { setTasks, clearInputImages, clearMaskDraft, setSettings, setParams, showToast } = useStore.getState()
+  const { setTasks, clearInputImages, clearMaskDraft, setSettings, setParams } = useStore.getState()
   const imageIds = new Set<string>()
 
   if (options.clearPromptProjects) {
@@ -59,6 +65,8 @@ export async function clearData(options: ClearOptions = { clearConfig: true, cle
     await clearTasks()
     await clearVideos()
     await clearAgentConversations()
+    // 画布节点引用的图片/视频随任务数据一起清理，避免残留断链的画布文档。
+    await clearCanvasDocuments()
     setTasks([])
     clearInputImages()
     clearMaskDraft()
@@ -76,11 +84,12 @@ export async function clearData(options: ClearOptions = { clearConfig: true, cle
 
   if (options.clearConfig) {
     useStore.setState({ dismissedCodexCliPrompts: [], supportPromptDismissed: false })
-    setSettings({ ...DEFAULT_SETTINGS })
+    // 走 syncSub2Settings 保持 Sub2-only 不变量（sub2OnlyVersion/占位 profile/hybrid 模式），
+    // 直接写 DEFAULT_SETTINGS 会把应用重置成非 Sub2 的 OpenAI 默认配置。
+    setSettings(syncSub2Settings({ ...DEFAULT_SETTINGS }, [], new Map()))
     setParams({ ...DEFAULT_PARAMS })
   }
-
-  showToast('所选数据已清空', 'success')
+  // 成功/失败提示由调用方（设置弹窗）统一处理，失败时向上抛出。
 }
 
 export interface ExportOptions {
@@ -93,16 +102,19 @@ export async function exportData(options: ExportOptions = { exportConfig: true, 
   try {
     const tasks = options.exportTasks ? await getAllTasks() : []
     const promptProjects = options.exportPromptProjects ? await getAllPromptProjects() : []
+    const canvasDocuments = options.exportTasks ? await getAllCanvasDocuments() : []
     const { settings, agentConversations, favoriteCollections, defaultFavoriteCollectionId } = useStore.getState()
     const exportedAgentConversations = options.exportTasks ? getPersistableAgentConversations(agentConversations) : []
     const imageIds = new Set<string>()
     for (const task of tasks) addTaskImageReferences(imageIds, task)
     addAgentImageReferences(imageIds, exportedAgentConversations)
     addPromptProjectImageReferences(imageIds, promptProjects)
+    addCanvasImageReferences(imageIds, canvasDocuments)
     const images = options.exportTasks || options.exportPromptProjects
       ? (await getAllImages()).filter((image) => imageIds.has(image.id))
       : []
     const videoIds = new Set(tasks.flatMap((task) => task.outputVideoIds || []))
+    collectCanvasDocumentVideoIds(videoIds, canvasDocuments)
     const videos = options.exportTasks
       ? await Promise.all((await getAllVideos()).filter((record) => videoIds.has(record.id)).map(async (record) => ({ record, bytes: new Uint8Array(await record.blob.arrayBuffer()) })))
       : []
@@ -135,6 +147,7 @@ export async function exportData(options: ExportOptions = { exportConfig: true, 
       defaultFavoriteCollectionId,
       agentConversations: exportedAgentConversations,
       promptProjects,
+      canvasDocuments,
     })
     const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' })
     const url = URL.createObjectURL(blob)
@@ -180,12 +193,22 @@ export async function importData(file: File, options: ImportOptions = { importCo
     const importedPromptProjects = options.importPromptProjects && data.promptProjects
       ? mergeImportedPromptProjects(data.promptProjects.map(migratePromptProject), await getAllPromptProjects())
       : []
+    const importedCanvasDocuments: CanvasDocument[] = []
+    if (options.importTasks && Array.isArray(data.canvasDocuments)) {
+      const existingCanvasIds = new Set((await getAllCanvasDocuments()).map((doc) => doc.id))
+      for (const raw of data.canvasDocuments) {
+        const doc = normalizeCanvasDocument(raw)
+        if (!doc) continue
+        importedCanvasDocuments.push(existingCanvasIds.has(doc.id) ? { ...doc, id: `${doc.id}-imported-${genId()}` } : doc)
+      }
+    }
     const imageIds = new Set<string>()
     if (options.importTasks) {
       for (const task of data.tasks || []) addTaskImageReferences(imageIds, task)
       addAgentImageReferences(imageIds, data.agentConversations || [])
     }
     addPromptProjectImageReferences(imageIds, importedPromptProjects)
+    addCanvasImageReferences(imageIds, importedCanvasDocuments)
 
     const importedImageIds: string[] = []
     if (data.imageFiles) {
@@ -276,6 +299,7 @@ export async function importData(file: File, options: ImportOptions = { importCo
     }
 
     for (const project of importedPromptProjects) await putPromptProject(project)
+    for (const doc of importedCanvasDocuments) await putCanvasDocument(doc)
     scheduleThumbnailBackfill(importedImageIds)
 
     if (options.importConfig && data.settings) {
@@ -286,6 +310,7 @@ export async function importData(file: File, options: ImportOptions = { importCo
     const imported = [
       ...(options.importTasks && data.tasks ? [`${data.tasks.length} 个任务`] : []),
       ...(options.importPromptProjects && data.promptProjects ? [`${importedPromptProjects.length} 个提示词项目`] : []),
+      ...(importedCanvasDocuments.length ? [`${importedCanvasDocuments.length} 个画布`] : []),
     ]
     const msg = imported.length
       ? `已导入 ${imported.join('、')}`

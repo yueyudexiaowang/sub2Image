@@ -7,10 +7,8 @@ import {
   CodeIcon,
   CollectionManageIcon,
   FavoriteIcon,
-  PromptLibraryIcon,
   SearchIcon,
 } from '../../../components/ui/icons'
-import PromptLibraryModal from '../../../components/PromptLibraryModal'
 import GalleryFilterButton from './GalleryFilterButton'
 
 type Props = {
@@ -23,7 +21,6 @@ const iconButtonClass = 'relative flex h-10 w-10 shrink-0 items-center justify-c
 export default function GalleryHeaderControls({ focused, onFocusChange }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [showPromptLibrary, setShowPromptLibrary] = useState(false)
   const searchQuery = useStore((s) => s.searchQuery)
   const setSearchQuery = useStore((s) => s.setSearchQuery)
   const filterFavorite = useStore((s) => s.filterFavorite)
@@ -31,10 +28,8 @@ export default function GalleryHeaderControls({ focused, onFocusChange }: Props)
   const activeFavoriteCollectionId = useStore((s) => s.activeFavoriteCollectionId)
   const setActiveFavoriteCollectionId = useStore((s) => s.setActiveFavoriteCollectionId)
   const openManageCollectionsModal = useStore((s) => s.openManageCollectionsModal)
-  const setPrompt = useStore((s) => s.setPrompt)
-  const showToast = useStore((s) => s.showToast)
   const inCollectionOverview = filterFavorite && !activeFavoriteCollectionId
-  const favoriteLabel = activeFavoriteCollectionId ? '返回收藏夹' : filterFavorite ? '退出收藏夹' : '收藏夹'
+  const favoriteLabel = activeFavoriteCollectionId ? '返回素材库' : filterFavorite ? '退出素材库' : '素材库'
 
   useEffect(() => {
     const blurSearch = (e: MouseEvent) => {
@@ -76,7 +71,7 @@ export default function GalleryHeaderControls({ focused, onFocusChange }: Props)
             {activeFavoriteCollectionId ? <ChevronLeftIcon className="h-5 w-5" /> : <FavoriteIcon filled={filterFavorite} className="h-5 w-5" />}
           </button>
           {inCollectionOverview && (
-            <button type="button" className={iconButtonClass} aria-label="管理收藏夹" title="管理收藏夹" onClick={openManageCollectionsModal}>
+            <button type="button" className={iconButtonClass} aria-label="管理素材集" title="管理素材集" onClick={openManageCollectionsModal}>
               <CollectionManageIcon className="h-5 w-5" />
             </button>
           )}
@@ -89,7 +84,7 @@ export default function GalleryHeaderControls({ focused, onFocusChange }: Props)
             type="text"
             value={searchQuery}
             aria-label="搜索提示词和参数"
-            placeholder={inCollectionOverview ? '搜索收藏夹名称...' : '搜索提示词、参数...'}
+            placeholder={inCollectionOverview ? '搜索素材集名称...' : '搜索提示词、参数...'}
             onFocus={() => onFocusChange(true)}
             onBlur={() => onFocusChange(false)}
             onKeyDown={(e) => {
@@ -114,22 +109,8 @@ export default function GalleryHeaderControls({ focused, onFocusChange }: Props)
 
         <div className="flex shrink-0 items-center gap-2">
           <GalleryFilterButton />
-
-          <button type="button" className={iconButtonClass} aria-label="提示词库" title="提示词库" onClick={() => setShowPromptLibrary(true)}>
-            <PromptLibraryIcon className="h-5 w-5" />
-          </button>
         </div>
       </div>
-
-      <PromptLibraryModal
-        open={showPromptLibrary}
-        onClose={() => setShowPromptLibrary(false)}
-        onUse={(item) => {
-          setPrompt(item.prompt)
-          setShowPromptLibrary(false)
-          showToast('已填入提示词', 'success')
-        }}
-      />
     </>
   )
 }

@@ -223,7 +223,8 @@ describe('Sub2ImageConversationComposer', () => {
     expect(screen.queryByRole('group', { name: '质量' })).toBeNull()
     expect(screen.queryByRole('spinbutton', { name: '输出压缩' })).toBeNull()
     expect(screen.queryByRole('group', { name: '审核强度' })).toBeNull()
-    expect(screen.queryByRole('combobox', { name: '生成模型' })).toBeNull()
+    // 设置浮层内提供模型选择区（2026-07 需求：模型选择整合进 composer）
+    expect(screen.getByRole('group', { name: '生成模型' })).toBeTruthy()
     expect(screen.getByRole('dialog', { name: '图片设置' })).toBeTruthy()
   })
 
@@ -233,7 +234,8 @@ describe('Sub2ImageConversationComposer', () => {
     const user = userEvent.setup()
     const agent = document.querySelector<HTMLButtonElement>('.cc-agent-button')!
 
-    expect(document.querySelector('[data-conversation-composer-dock] [title="提示词库"]')).toBeNull()
+    // 提示词库入口已整合进 composer 工具栏（2026-07 需求）
+    expect(document.querySelector('[data-conversation-composer-dock] [title="提示词库"]')).not.toBeNull()
     await user.click(agent)
 
     // 选中后 Agent 按钮会切换为液态样式的新元素，需要重新查询
@@ -280,13 +282,15 @@ describe('Sub2ImageConversationComposer', () => {
     expect(screen.queryByRole('group', { name: '生成类型' })).toBeNull()
     expect(useStore.getState().appMode).toBe('gallery')
     expect(document.querySelector('[data-generation-icon="image"]')).toBeTruthy()
-    expect(screen.getByRole('button', { name: '生成设置' }).textContent).toContain('Image')
+    // 触发按钮显示当前生效的图片模型名（2026-07 需求）
+    expect(screen.getByRole('button', { name: '生成设置' }).textContent).toContain('gpt-image-2')
     await user.click(screen.getByRole('button', { name: '生成设置' }))
     await user.click(screen.getByRole('button', { name: '生成类型 视频' }))
 
     expect(screen.getByRole('textbox', { name: '视频提示词输入' })).toBeTruthy()
     expect(document.querySelector('[data-generation-icon="video"]')).toBeTruthy()
-    expect(screen.getByRole('button', { name: '生成设置' }).textContent).toContain('Video')
+    // 未配置视频模型时提示选择模型
+    expect(screen.getByRole('button', { name: '生成设置' }).textContent).toContain('选择模型')
     expect(screen.getByRole('dialog', { name: '视频设置' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '生成类型 视频' }).getAttribute('aria-pressed')).toBe('true')
     expect(useStore.getState().appMode).toBe('gallery')

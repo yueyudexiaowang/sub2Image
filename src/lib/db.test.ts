@@ -21,6 +21,7 @@ const DB_NAME = 'gpt-image-playground'
 const OLD_STORES = ['tasks', 'images', 'thumbnails', 'agentConversations', 'promptCache']
 const STORE_PROMPT_PROJECTS = 'promptProjects'
 const STORE_VIDEOS = 'videos'
+const STORE_CANVAS_DOCUMENTS = 'canvasDocuments'
 
 function promptProject(id: string, conversationId: string | undefined, updatedAt: number): PromptProject {
   return {
@@ -61,7 +62,7 @@ function openVersion4Database() {
 
 function openCurrentDatabase() {
   return new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 6)
+    const req = indexedDB.open(DB_NAME, 8)
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
   })
@@ -87,7 +88,7 @@ afterEach(async () => {
   vi.unstubAllGlobals()
 })
 
-describe('IndexedDB v6', () => {
+describe('IndexedDB v8', () => {
   it('upgrades v4 without losing existing stores or records', async () => {
     const db = await openVersion4Database()
     const tx = db.transaction(['tasks', 'images', 'agentConversations'], 'readwrite')
@@ -104,8 +105,8 @@ describe('IndexedDB v6', () => {
 
     await closeDatabase()
     const upgraded = await openCurrentDatabase()
-    expect(upgraded.version).toBe(6)
-    expect(Array.from(upgraded.objectStoreNames)).toEqual(expect.arrayContaining([...OLD_STORES, STORE_PROMPT_PROJECTS, STORE_VIDEOS]))
+    expect(upgraded.version).toBe(8)
+    expect(Array.from(upgraded.objectStoreNames)).toEqual(expect.arrayContaining([...OLD_STORES, STORE_PROMPT_PROJECTS, STORE_VIDEOS, STORE_CANVAS_DOCUMENTS]))
     const projectTx = upgraded.transaction(STORE_PROMPT_PROJECTS, 'readonly')
     expect(projectTx.objectStore(STORE_PROMPT_PROJECTS).indexNames.contains('conversationId')).toBe(true)
     await waitForTransaction(projectTx)

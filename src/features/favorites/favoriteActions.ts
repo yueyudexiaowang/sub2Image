@@ -25,7 +25,7 @@ export function createFavoriteCollection(name: string) {
   const normalizedName = normalizeFavoriteCollectionName(name)
   if (!normalizedName) return null
   if (Array.from(normalizedName).length > 60) {
-    useStore.getState().showToast('收藏夹名称最多 60 个字符', 'error')
+    useStore.getState().showToast('素材集名称最多 60 个字符', 'error')
     return null
   }
   const state = useStore.getState()
@@ -34,7 +34,7 @@ export function createFavoriteCollection(name: string) {
   const now = Date.now()
   const collection: FavoriteCollection = { id: genId(), name: normalizedName, createdAt: now, updatedAt: now }
   state.setFavoriteCollections([...state.favoriteCollections, collection])
-  state.showToast(`已创建收藏夹「${normalizedName}」`, 'success')
+  state.showToast(`已创建素材集「${normalizedName}」`, 'success')
   return collection
 }
 
@@ -42,14 +42,14 @@ export function renameFavoriteCollection(collectionId: string, name: string) {
   const normalizedName = normalizeFavoriteCollectionName(name)
   if (!normalizedName || collectionId === ALL_FAVORITES_COLLECTION_ID) return
   if (Array.from(normalizedName).length > 60) {
-    useStore.getState().showToast('收藏夹名称最多 60 个字符', 'error')
+    useStore.getState().showToast('素材集名称最多 60 个字符', 'error')
     return
   }
   const { favoriteCollections, setFavoriteCollections, showToast } = useStore.getState()
   setFavoriteCollections(favoriteCollections.map((collection) =>
     collection.id === collectionId ? { ...collection, name: normalizedName, updatedAt: Date.now() } : collection,
   ))
-  showToast('收藏夹名称已更新', 'success')
+  showToast('素材集名称已更新', 'success')
 }
 
 export async function updateTasksFavoriteCollections(taskIds: string[], collectionIds: string[]) {
@@ -72,7 +72,7 @@ export async function updateTasksFavoriteCollections(taskIds: string[], collecti
   setTasks(updated)
   await Promise.all(updated.filter((task) => changedTaskIds.has(task.id)).map((task) => putTask(task)))
   clearSelection()
-  showToast(ids.length ? '收藏夹已更新' : '已取消收藏', 'success')
+  showToast(ids.length ? '素材集已更新' : '已移出素材库', 'success')
 }
 
 export async function deleteFavoriteCollection(
@@ -128,5 +128,5 @@ export async function deleteFavoriteCollection(
     await Promise.all(updated.filter((task) => idsByTaskId.has(task.id)).map((task) => putTask(task)))
   }
   useStore.getState().setSelectedFavoriteCollectionIds((ids) => ids.filter((id) => id !== collectionId))
-  useStore.getState().showToast(`已删除收藏夹「${collection.name}」`, 'success')
+  useStore.getState().showToast(`已删除素材集「${collection.name}」`, 'success')
 }

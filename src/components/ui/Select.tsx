@@ -8,6 +8,8 @@ import { useTooltip } from '../../hooks/useTooltip'
 interface Option {
   label: string
   value: string | number
+  /** 分节标题：不可点击，仅作为分组名展示 */
+  heading?: boolean
   variant?: 'action' | 'danger'
   draggable?: boolean
   actions?: Array<{
@@ -16,6 +18,8 @@ interface Option {
     onClick: () => void
   }>
 }
+
+export type SelectOption = Option
 
 interface SelectProps {
   value: string | number
@@ -61,7 +65,8 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
     }
   }
 
-  const selectedOption = options.find((o) => o.value === value)
+  const selectedOption = options.find((o) => !o.heading && o.value === value)
+  const hasHeadings = options.some((o) => o.heading)
 
   useEffect(() => {
     return () => {
@@ -183,17 +188,17 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
       <div
         ref={triggerRef}
         {...triggerTooltip.handlers}
-        role={ariaLabel ? 'combobox' : undefined}
+        role="combobox"
         aria-label={ariaLabel}
-        aria-expanded={ariaLabel ? isOpen : undefined}
-        tabIndex={ariaLabel && !disabled ? 0 : undefined}
+        aria-expanded={isOpen}
+        tabIndex={!disabled ? 0 : undefined}
         onClick={(e) => {
           triggerTooltip.handlers.onClick?.()
           handleToggle(e)
           triggerTooltip.dismiss()
         }}
         onKeyDown={(e) => {
-          if (!ariaLabel || disabled) return
+          if (disabled) return
           if (e.key === 'Escape') {
             setIsOpen(false)
             return
@@ -215,19 +220,28 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
 
       {isOpen && (
         <div
-          role={ariaLabel ? 'listbox' : undefined}
+          role="listbox"
           aria-label={ariaLabel ? `${ariaLabel}选项` : undefined}
           className={`absolute z-50 w-full overflow-hidden overflow-y-auto rounded-xl border border-gray-200/60 bg-white/95 py-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl dark:border-white/[0.08] dark:bg-gray-900/95 dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] dark:ring-white/10 custom-scrollbar ${
             placement === 'top' ? 'bottom-full mb-1.5 animate-dropdown-up' : 'top-full mt-1.5 animate-dropdown-down'
           }`}
           style={{ maxHeight: menuMaxHeight }}
         >
-          {options.map((option) => (
+          {options.map((option) => option.heading ? (
+            <div
+              key={`heading-${option.value}`}
+              role="presentation"
+              aria-hidden="true"
+              className="select-none px-3 pb-1 pt-2.5 text-[11px] font-medium text-gray-400 dark:text-gray-500 first:pt-1.5"
+            >
+              <span className="block truncate">{option.label}</span>
+            </div>
+          ) : (
             <div
               key={option.value}
               data-option-value={String(option.value)}
-              role={ariaLabel ? 'option' : undefined}
-              aria-selected={ariaLabel ? option.value === value : undefined}
+              role="option"
+              aria-selected={option.value === value}
               draggable={option.draggable}
               onDragStart={(e) => {
                 if (!option.draggable) return
@@ -416,7 +430,7 @@ export default function Select({ value, onChange, onReorder, options, disabled, 
                 clearOptionTooltipTimer()
                 setHoveredOptionTooltip(null)
               }}
-              className={`relative flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs transition-colors ${
+              className={`relative flex cursor-pointer items-center justify-between gap-2 py-2 pr-3 text-xs transition-colors ${hasHeadings ? 'pl-5' : 'pl-3'} ${
                 draggedValue === option.value
                   ? 'opacity-40 bg-gray-100 dark:bg-white/[0.04]'
                   : option.variant === 'action'

@@ -4,11 +4,12 @@ import { getAgentVideoApiProfile } from '../../lib/apiProfiles'
 import { useStore } from '../../store'
 import { getVideoProvider, resolveVideoProviderId, type VideoParams, type VideoProfile } from '../../videoIntegrations'
 import { LandscapeIcon, PortraitIcon } from '../../components/ui/icons'
+import Sub2ComposerModelSelect from './Sub2ComposerModelSelect'
 import Sub2GenerationModeTabs from './Sub2GenerationModeTabs'
 
 type Props = {
-  mode: 'image' | 'video'
-  onModeChange: (mode: 'image' | 'video') => void
+  mode?: 'image' | 'video'
+  onModeChange?: (mode: 'image' | 'video') => void
   params: VideoParams
   onChange: (params: VideoParams) => void
   onClose: () => void
@@ -66,7 +67,7 @@ export default function Sub2VideoComposerSettings({ mode, onModeChange, params, 
   return createPortal(
     <div className="cc-settings-overlay" data-composer-settings onClick={onClose}>
       <div className="cc-settings-popover" role="dialog" aria-label="视频设置" style={position} onClick={(e) => e.stopPropagation()}>
-        <Sub2GenerationModeTabs value={mode} onChange={onModeChange} />
+        {mode && onModeChange && <Sub2GenerationModeTabs value={mode} onChange={onModeChange} />}
         <VideoOptionGroup
           label="时长"
           value={params.duration}
@@ -112,6 +113,7 @@ export default function Sub2VideoComposerSettings({ mode, onModeChange, params, 
             })
           }}
         />
+        <Sub2ComposerModelSelect kind="video" onRequestClose={onClose} />
       </div>
     </div>,
     document.body,

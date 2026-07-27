@@ -4,6 +4,7 @@ import { getOutputImageLimitForSettings } from '../../lib/paramCompatibility'
 import { calculateImageSize, normalizeImageSize, type SizeTier } from '../../lib/size'
 import { useStore } from '../../store'
 import type { TaskParams } from '../../types'
+import Sub2ComposerModelSelect from './Sub2ComposerModelSelect'
 import Sub2GenerationModeTabs from './Sub2GenerationModeTabs'
 
 type Props = {
@@ -190,6 +191,7 @@ export default function Sub2ImageComposerSettings({ mode, onModeChange, onClose,
             </button>
           ))}
         </div>
+        <Sub2ComposerModelSelect kind="image" onRequestClose={onClose} />
       </div>
     </div>,
     document.body,

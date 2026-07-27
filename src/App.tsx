@@ -24,6 +24,7 @@ import LandingPage from './components/LandingPage'
 import JwsConnectModal from './components/JwsConnectModal'
 import { FavoriteCollectionPickerModal, FavoriteCollectionsView, ManageCollectionsModal } from './components/FavoriteCollections'
 import { ExtensionWorkspace, isExtensionPath } from './ExtensionWorkspace'
+import { CanvasApp, CanvasPickerModal, isCanvasPath } from './features/canvas'
 import { useGlobalClickSuppression } from './lib/clickSuppression'
 import {
   autoSaveSkillToCloud,
@@ -63,9 +64,13 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!isExtensionPath(path)) return
+    if (!isExtensionPath(path) && !isCanvasPath(path)) return
     void initCloudRuntime().catch((err) => console.warn('加载云端数据失败：', err))
   }, [path])
+
+  if (isCanvasPath(path)) {
+    return <CanvasApp path={path} />
+  }
 
   if (isExtensionPath(path)) {
     return (
@@ -239,6 +244,7 @@ function Workspace() {
       <Toast />
       <MaskEditorModal />
       <ImageContextMenu />
+      <CanvasPickerModal />
     </>
   )
 }

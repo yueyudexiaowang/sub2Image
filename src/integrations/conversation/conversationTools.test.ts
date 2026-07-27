@@ -5,6 +5,7 @@ import { createConversationRuntime, type ConversationMessageProps, type Conversa
 import { createMessageRendererRegistry } from '../../features/conversationView'
 import {
   conversationTools,
+  SUB2_CANVAS_TOOL_ID,
   SUB2_CHAT_TOOL_ID,
   SUB2_IMAGE_TOOL_ID,
   SUB2_VIDEO_TOOL_ID,
@@ -68,8 +69,8 @@ describe('sub2Image conversation Tools', () => {
     expect(registry.get('dummy/result')).toBe(Renderer)
   })
 
-  it('registers image, video and Agent chat Tools', () => {
-    expect(conversationTools.map((tool) => tool.id)).toEqual([SUB2_IMAGE_TOOL_ID, SUB2_VIDEO_TOOL_ID, SUB2_CHAT_TOOL_ID])
+  it('registers image, video, Agent chat and canvas Tools', () => {
+    expect(conversationTools.map((tool) => tool.id)).toEqual([SUB2_IMAGE_TOOL_ID, SUB2_VIDEO_TOOL_ID, SUB2_CHAT_TOOL_ID, SUB2_CANVAS_TOOL_ID])
   })
 
   it('provides Chat state and routes submit and stop through the adapter', async () => {

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { TaskRecord } from '../../types'
 import { useTooltip } from '../../hooks/useTooltip'
-import { CloudIcon } from '../ui/icons'
+import { CanvasNodesIcon, CloudIcon } from '../ui/icons'
 import ViewportTooltip from '../ui/ViewportTooltip'
 
 function BatchActionButton({
@@ -55,6 +55,7 @@ export default function InputBatchBars({
   onSelectAllVisibleTasks,
   onInvertVisibleTasks,
   onToggleFavorite,
+  onAddToCanvas,
   onSaveToCloud,
   cloudSaveProgress,
   onDownloadSelected,
@@ -73,6 +74,7 @@ export default function InputBatchBars({
   onSelectAllVisibleTasks: () => void
   onInvertVisibleTasks: () => void
   onToggleFavorite: () => void
+  onAddToCanvas: () => void
   onSaveToCloud: () => void | Promise<void>
   cloudSaveProgress: { completed: number; total: number } | null
   onDownloadSelected: () => void | Promise<void>
@@ -95,7 +97,7 @@ export default function InputBatchBars({
           <BatchActionButton
             onClick={onSelectAllVisibleFavoriteCollections}
             className="p-2 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-            tooltip="全选收藏夹"
+            tooltip="全选素材集"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -105,7 +107,7 @@ export default function InputBatchBars({
           <BatchActionButton
             onClick={onInvertVisibleFavoriteCollections}
             className="p-2 text-purple-500 dark:text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors"
-            tooltip="反选收藏夹"
+            tooltip="反选素材集"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
               <path strokeDasharray="4 4" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" />
@@ -176,7 +178,7 @@ export default function InputBatchBars({
         <BatchActionButton
           onClick={onToggleFavorite}
           className="p-2 text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300 transition-colors"
-          tooltip="编辑收藏夹"
+          tooltip="编辑素材集"
         >
           {selectedTaskIds.length > 0 && selectedTaskIds.every((id) => tasks.find((t) => t.id === id)?.isFavorite) ? (
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -187,6 +189,14 @@ export default function InputBatchBars({
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           )}
+        </BatchActionButton>
+        <div className="w-px h-5 bg-gray-200 dark:bg-white/20 mx-1"></div>
+        <BatchActionButton
+          onClick={onAddToCanvas}
+          className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+          tooltip="加入画布"
+        >
+          <CanvasNodesIcon className="w-5 h-5" />
         </BatchActionButton>
         <div className="w-px h-5 bg-gray-200 dark:bg-white/20 mx-1"></div>
         <BatchActionButton

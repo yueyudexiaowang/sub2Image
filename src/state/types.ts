@@ -19,7 +19,7 @@ export type AgentInputDraft = {
   updatedAt?: number
 }
 
-export type SettingsTab = 'general' | 'agent' | 'sub2api' | 'api' | 'data'
+export type SettingsTab = 'general' | 'agent' | 'sub2api' | 'data'
 
 export interface AppState {
   // 模式
@@ -129,6 +129,8 @@ export interface AppState {
   showSettings: boolean
   settingsTabRequest: SettingsTab | null
   setShowSettings: (v: boolean, tab?: SettingsTab) => void
+  /** 设置弹窗消费 tab 请求后调用，保证重复请求同一 tab 也能触发切换 */
+  clearSettingsTabRequest: () => void
   supportPromptOpen: boolean
   supportPromptDismissed: boolean
   supportPromptSkippedForImportedData: boolean

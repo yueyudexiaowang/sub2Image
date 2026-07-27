@@ -1,8 +1,10 @@
 import type { PromptProject } from '../features/promptStudio'
+import type { CanvasDocument } from '../features/canvas/types'
 import type { AgentConversation, PromptCache, StoredImage, StoredImageThumbnail, StoredVideo, TaskRecord } from '../types'
 
 const DB_NAME = 'gpt-image-playground'
-const DB_VERSION = 6
+// v8：修复 v7 升级期间可能未创建 canvasDocuments store 的问题（升级逻辑幂等，重跑安全）
+const DB_VERSION = 8
 const STORE_TASKS = 'tasks'
 const STORE_IMAGES = 'images'
 const STORE_THUMBNAILS = 'thumbnails'
@@ -10,6 +12,7 @@ const STORE_VIDEOS = 'videos'
 const STORE_AGENT_CONVERSATIONS = 'agentConversations'
 const STORE_PROMPT_CACHE = 'promptCache'
 const STORE_PROMPT_PROJECTS = 'promptProjects'
+const STORE_CANVAS_DOCUMENTS = 'canvasDocuments'
 const INDEX_PROMPT_PROJECTS_CONVERSATION_ID = 'conversationId'
 const THUMBNAIL_MAX_SIZE = 720
 const THUMBNAIL_QUALITY = 0.9
@@ -74,6 +77,9 @@ function openDB(): Promise<IDBDatabase> {
         : db.createObjectStore(STORE_PROMPT_PROJECTS, { keyPath: 'id' })
       if (!projectStore.indexNames.contains(INDEX_PROMPT_PROJECTS_CONVERSATION_ID)) {
         projectStore.createIndex(INDEX_PROMPT_PROJECTS_CONVERSATION_ID, 'conversationId')
+      }
+      if (!db.objectStoreNames.contains(STORE_CANVAS_DOCUMENTS)) {
+        db.createObjectStore(STORE_CANVAS_DOCUMENTS, { keyPath: 'id' })
       }
     }
     req.onsuccess = () => {
@@ -257,6 +263,29 @@ export function deletePromptProject(id: string): Promise<undefined> {
 
 export function clearPromptProjects(): Promise<undefined> {
   return dbTransaction(STORE_PROMPT_PROJECTS, 'readwrite', (s) => s.clear())
+}
+
+// ===== Canvas documents =====
+
+export function getAllCanvasDocuments(): Promise<CanvasDocument[]> {
+  return dbTransaction(STORE_CANVAS_DOCUMENTS, 'readonly', (s) => s.getAll())
+}
+
+export function getCanvasDocument(id: string): Promise<CanvasDocument | null> {
+  return dbTransaction<CanvasDocument | undefined>(STORE_CANVAS_DOCUMENTS, 'readonly', (s) => s.get(id))
+    .then((doc) => doc ?? null)
+}
+
+export function putCanvasDocument(doc: CanvasDocument): Promise<IDBValidKey> {
+  return dbTransaction(STORE_CANVAS_DOCUMENTS, 'readwrite', (s) => s.put(doc))
+}
+
+export function deleteCanvasDocument(id: string): Promise<undefined> {
+  return dbTransaction(STORE_CANVAS_DOCUMENTS, 'readwrite', (s) => s.delete(id))
+}
+
+export function clearCanvasDocuments(): Promise<undefined> {
+  return dbTransaction(STORE_CANVAS_DOCUMENTS, 'readwrite', (s) => s.clear())
 }
 
 // ===== Images =====

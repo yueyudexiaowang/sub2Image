@@ -3,7 +3,8 @@ import { useStore, addImageFromUrl, ensureImageCached } from '../../../store'
 import { canCopyImageToClipboard, copyImageSourceToClipboard, getClipboardFailureMessage } from '../../../lib/clipboard'
 import { downloadImageEntriesAsZip, downloadImageIds, formatExportFileTime, getImageZipEntries } from '../../../lib/downloadImages'
 import { suppressGlobalClicks } from '../../../lib/clickSuppression'
-import { CopyIcon, DownloadIcon, EditIcon } from '../../../components/ui/icons'
+import { openCanvasPicker } from '../../canvas'
+import { CanvasNodesIcon, CopyIcon, DownloadIcon, EditIcon } from '../../../components/ui/icons'
 
 export default function ImageContextMenu() {
   const [menuInfo, setMenuInfo] = useState<{ src: string; imageId?: string; outputImageIds: string[]; canCopyImage: boolean; x: number; y: number } | null>(null)
@@ -189,12 +190,23 @@ export default function ImageContextMenu() {
     }
   }
 
+  const handleAddToCanvas = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const imageId = menuInfo.imageId
+    setMenuInfo(null)
+    if (!imageId) return
+    setDetailTaskId(null)
+    setLightboxImageId(null)
+    openCanvasPicker([imageId])
+  }
+
   // 保证菜单在视口内
   let left = menuInfo.x
   let top = menuInfo.y
   const MENU_WIDTH = 120
   const showDownloadAll = menuInfo.outputImageIds.length > 1
-  const menuItemCount = (menuInfo.canCopyImage ? 1 : 0) + 1 + (showDownloadAll ? 1 : 0) + 1
+  const showAddToCanvas = Boolean(menuInfo.imageId)
+  const menuItemCount = (menuInfo.canCopyImage ? 1 : 0) + 1 + (showDownloadAll ? 1 : 0) + 1 + (showAddToCanvas ? 1 : 0)
   const MENU_HEIGHT = menuItemCount * 32 + 32
 
   if (left + MENU_WIDTH > window.innerWidth) {
@@ -243,6 +255,15 @@ export default function ImageContextMenu() {
         <EditIcon className="w-4 h-4 flex-shrink-0" />
         编辑
       </button>
+      {showAddToCanvas && (
+        <button
+          onClick={handleAddToCanvas}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"
+        >
+          <CanvasNodesIcon className="w-4 h-4 flex-shrink-0" />
+          加入画布
+        </button>
+      )}
     </div>
   )
 }

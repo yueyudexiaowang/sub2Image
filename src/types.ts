@@ -1,4 +1,5 @@
 import type { PromptProject } from './features/promptStudio'
+import type { CanvasDocument } from './features/canvas/types'
 
 // ===== 设置 =====
 
@@ -304,9 +305,9 @@ export interface TaskRecord {
   finishedAt: number | null
   /** 总耗时毫秒 */
   elapsed: number | null
-  /** 是否收藏 */
+  /** 是否已存入素材库 */
   isFavorite?: boolean
-  /** 所属收藏夹 ID 列表 */
+  /** 所属素材集 ID 列表 */
   favoriteCollectionIds?: string[]
   /** 来源模式：画廊 / Agent */
   sourceMode?: AppMode
@@ -322,6 +323,10 @@ export interface TaskRecord {
   agentBatchCallId?: string
   /** Agent 图像工具实际动作 */
   agentToolAction?: 'generate' | 'edit' | 'auto' | string
+  /** 无限画布文档 ID（画布内发起的生成任务） */
+  canvasDocumentId?: string
+  /** 无限画布节点 ID */
+  canvasNodeId?: string
 }
 
 export interface FavoriteCollection {
@@ -533,6 +538,7 @@ export interface ExportData {
   defaultFavoriteCollectionId?: string | null
   agentConversations?: AgentConversation[]
   promptProjects?: PromptProject[]
+  canvasDocuments?: CanvasDocument[]
   /** imageId → 图片信息 */
   imageFiles?: Record<string, {
     path: string

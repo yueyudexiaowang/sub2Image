@@ -1,8 +1,9 @@
-import type { AppMode } from '../types'
+// 顶部工作区切换：画廊 / 无限画布（对话入口暂时隐藏）。
+export type AiLiquidMode = 'gallery' | 'canvas'
 
 interface AiLiquidModeSwitchProps {
-  value: AppMode
-  onChange: (mode: AppMode) => void
+  value: AiLiquidMode
+  onChange: (mode: AiLiquidMode) => void
   className?: string
 }
 
@@ -16,7 +17,7 @@ export function AiLiquidModeSwitch({ value, onChange, className = '' }: AiLiquid
       <span
         aria-hidden
         className="ai-liquid-mode-switch__thumb pointer-events-none absolute left-1 top-1 h-8 w-[calc(50%-4px)] rounded-full transition-transform duration-300 ease-out"
-        style={{ transform: value === 'agent' ? 'translateX(100%)' : 'translateX(0)' }}
+        style={{ transform: value === 'canvas' ? 'translateX(100%)' : 'translateX(0)' }}
       />
       <button
         type="button"
@@ -28,11 +29,11 @@ export function AiLiquidModeSwitch({ value, onChange, className = '' }: AiLiquid
       </button>
       <button
         type="button"
-        aria-pressed={value === 'agent'}
-        onClick={() => onChange('agent')}
-        className={`relative z-10 flex h-8 min-w-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-400 ${value === 'agent' ? 'font-medium text-zinc-950' : 'text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'}`}
+        aria-pressed={value === 'canvas'}
+        onClick={() => onChange('canvas')}
+        className={`relative z-10 flex h-8 min-w-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-400 ${value === 'canvas' ? 'font-medium text-zinc-950' : 'text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'}`}
       >
-        对话
+        无限画布
       </button>
     </div>
   )

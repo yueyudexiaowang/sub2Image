@@ -1,10 +1,11 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 
 import type { PromptProject } from '../features/promptStudio'
+import type { CanvasDocument } from '../features/canvas/types'
 import type { AgentConversation, AppSettings, ExportData, FavoriteCollection, StoredImage, StoredImageThumbnail, StoredVideo, TaskRecord } from '../types'
 import { bytesToDataUrl, dataUrlToBytes } from './dataUrl'
 import { getNumberedFileNameBase, sanitizeFileNamePart } from './exportFileName'
-import { addAgentImageReferences, addPromptProjectImageReferences, addTaskImageReferences } from './imageReferences'
+import { addAgentImageReferences, addCanvasImageReferences, addPromptProjectImageReferences, addTaskImageReferences } from './imageReferences'
 
 type ZipFiles = Record<string, Uint8Array | [Uint8Array, { mtime: Date }]>
 
@@ -26,6 +27,7 @@ export interface BuildExportZipParams {
   defaultFavoriteCollectionId: string | null
   agentConversations: AgentConversation[]
   promptProjects: PromptProject[]
+  canvasDocuments?: CanvasDocument[]
 }
 
 export interface ExportZipContents {
@@ -38,7 +40,9 @@ export function buildExportZip(params: BuildExportZipParams) {
   const exportedTasks = params.options.exportTasks ? params.tasks : []
   const exportedConversations = params.options.exportTasks ? params.agentConversations : []
   const exportedProjects = params.options.exportPromptProjects ? params.promptProjects : []
+  const exportedCanvasDocuments = params.options.exportTasks ? params.canvasDocuments ?? [] : []
   const imageIds = getExportImageIds(exportedTasks, exportedConversations, exportedProjects)
+  addCanvasImageReferences(imageIds, exportedCanvasDocuments)
   const imageCreatedAtFallback = getImageCreatedAtFallback(exportedTasks, exportedProjects)
   const imageFileNameBases = getImageFileNameBases(exportedTasks, exportedProjects)
   const imageFiles: ExportData['imageFiles'] = {}
@@ -112,6 +116,7 @@ export function buildExportZip(params: BuildExportZipParams) {
     manifest.favoriteCollections = params.favoriteCollections
     manifest.defaultFavoriteCollectionId = params.defaultFavoriteCollectionId
     manifest.agentConversations = params.agentConversations
+    manifest.canvasDocuments = params.canvasDocuments ?? []
     manifest.imageFiles = imageFiles
     manifest.thumbnailFiles = thumbnailFiles
     manifest.videoFiles = videoFiles

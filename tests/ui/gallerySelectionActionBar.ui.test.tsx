@@ -50,14 +50,14 @@ function task(id: string, prompt: string, values: Partial<TaskRecord> = {}): Tas
 
 const collectionA: FavoriteCollection = {
   id: 'collection-a',
-  name: '收藏一',
+  name: '素材一',
   createdAt: 1,
   updatedAt: 1,
 }
 
 const collectionB: FavoriteCollection = {
   id: 'collection-b',
-  name: '收藏二',
+  name: '素材二',
   createdAt: 2,
   updatedAt: 2,
 }
@@ -93,7 +93,7 @@ describe('GallerySelectionActionBar', () => {
     await user.click(screen.getByRole('button', { name: '反选任务' }))
     expect(useStore.getState().selectedTaskIds).toEqual([hiddenBySearch.id])
 
-    await user.click(screen.getByRole('button', { name: '编辑收藏夹' }))
+    await user.click(screen.getByRole('button', { name: '编辑素材集' }))
     expect(useStore.getState().favoritePickerTaskIds).toEqual([hiddenBySearch.id])
   })
 
@@ -134,7 +134,7 @@ describe('GallerySelectionActionBar', () => {
     expect(mocks.removeMultipleTasks).toHaveBeenCalledWith([selected.id])
   })
 
-  it('收藏夹总览优先显示收藏夹操作，并保持下载与删除语义', async () => {
+  it('素材库总览优先显示素材集操作，并保持下载与删除语义', async () => {
     const selected = task('task-a', '任务 A', {
       isFavorite: true,
       favoriteCollectionIds: [collectionA.id],
@@ -153,13 +153,13 @@ describe('GallerySelectionActionBar', () => {
     const user = userEvent.setup()
     render(<GallerySelectionActionBar />)
 
-    expect(screen.getByRole('button', { name: '全选收藏夹' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '全选素材集' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: '全选任务' })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: '下载选中' }))
     await waitFor(() => expect(mocks.downloadImageEntriesAsZip).toHaveBeenCalledWith(
       [expect.objectContaining({ imageId: `${selected.id}-image` })],
-      'favorites-收藏一-test-time',
+      'favorites-素材一-test-time',
     ))
     expect(showToast).toHaveBeenCalledWith('下载成功：1 张图片', 'success')
     expect(useStore.getState().selectedFavoriteCollectionIds).toEqual([])
@@ -168,10 +168,10 @@ describe('GallerySelectionActionBar', () => {
     await user.click(screen.getByRole('button', { name: '删除选中' }))
     const dialog = useStore.getState().confirmDialog
     expect(dialog).toMatchObject({
-      title: '批量删除收藏夹',
-      message: '确定要删除选中的 1 个收藏夹吗？',
+      title: '批量删除素材集',
+      message: '确定要删除选中的 1 个素材集吗？',
       checkbox: {
-        label: '同时删除收藏夹中的图片（1 张）',
+        label: '同时删除素材集中的图片（1 张）',
         tone: 'danger',
       },
     })
@@ -183,7 +183,7 @@ describe('GallerySelectionActionBar', () => {
     expect(useStore.getState().selectedFavoriteCollectionIds).toEqual([])
   })
 
-  it('没有选择时不渲染操作栏，删除全部真实收藏夹时保留原提示', async () => {
+  it('没有选择时不渲染操作栏，删除全部真实素材集时保留原提示', async () => {
     const showToast = vi.fn()
     useStore.setState({
       favoriteCollections: [collectionA],
@@ -199,7 +199,7 @@ describe('GallerySelectionActionBar', () => {
 
     act(() => useStore.getState().setSelectedFavoriteCollectionIds([collectionA.id]))
     await user.click(screen.getByRole('button', { name: '删除选中' }))
-    expect(showToast).toHaveBeenCalledWith('至少保留一个收藏夹', 'error')
+    expect(showToast).toHaveBeenCalledWith('至少保留一个素材集', 'error')
     expect(useStore.getState().confirmDialog).toBeNull()
   })
 

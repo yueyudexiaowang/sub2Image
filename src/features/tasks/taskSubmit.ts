@@ -20,6 +20,8 @@ export type SubmitTaskOptions = {
   apiProfileId?: string
   signal?: AbortSignal
   draft?: ComposerDraft
+  /** 无限画布发起的任务：绑定文档与节点，供画布回填结果 */
+  canvasRef?: { documentId: string; nodeId: string }
 }
 
 function waitForTaskConfirmation(
@@ -188,6 +190,7 @@ export async function submitTask(
     createdAt: Date.now(),
     finishedAt: null,
     elapsed: null,
+    ...(options.canvasRef ? { canvasDocumentId: options.canvasRef.documentId, canvasNodeId: options.canvasRef.nodeId } : {}),
   }
 
   useStore.getState().setTasks([task, ...useStore.getState().tasks])

@@ -46,7 +46,7 @@ export function ensureDefaultFavoriteCollection(collections: FavoriteCollection[
   return [createDefaultFavoriteCollection(), ...collections]
 }
 
-/** 确保“默认”收藏夹存在，用于兜底孤立收藏任务。 */
+/** 确保“默认”素材集存在，用于兜底孤立的已入库任务。 */
 export function ensureDefaultNamedCollection(collections: FavoriteCollection[]) {
   if (getDefaultNamedFavoriteCollectionId(collections)) return collections
   return [createDefaultFavoriteCollection(), ...collections]

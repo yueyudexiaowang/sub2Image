@@ -155,13 +155,13 @@ beforeEach(() => {
 })
 
 describe('云端运行时', () => {
-  it('bootstrap 合并远端任务和收藏夹，不覆盖本地任务', async () => {
+  it('bootstrap 合并远端任务和素材集，不覆盖本地任务', async () => {
     const local = task('local-task')
     const remote = task('remote-task') as TaskRecord & { cloudFavoriteCollections: FavoriteCollection[] }
     remote.favoriteCollectionIds = ['remote-collection']
-    remote.cloudFavoriteCollections = [{ id: 'remote-collection', name: '云端收藏夹', createdAt: 2, updatedAt: 2 }]
+    remote.cloudFavoriteCollections = [{ id: 'remote-collection', name: '云端素材集', createdAt: 2, updatedAt: 2 }]
     mock.store.tasks = [local]
-    mock.store.favoriteCollections = [{ id: 'local-collection', name: '本地收藏夹', createdAt: 1, updatedAt: 1 }]
+    mock.store.favoriteCollections = [{ id: 'local-collection', name: '本地素材集', createdAt: 1, updatedAt: 1 }]
     mock.loadCloudBootstrap.mockResolvedValue(bootstrap('user-a', [cloudTask(remote.id, remote)]))
 
     const runtime = await import('../runtime')

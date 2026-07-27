@@ -691,7 +691,7 @@ export default function TaskCard({
               </TaskActionButton>
             )}
             <TaskActionButton
-              tooltip={task.isFavorite ? '编辑收藏夹' : '收藏任务'}
+              tooltip={task.isFavorite ? '编辑素材集' : '存入素材库'}
               onClick={(e) => {
                 e.stopPropagation()
                 openFavoritePicker([task.id])

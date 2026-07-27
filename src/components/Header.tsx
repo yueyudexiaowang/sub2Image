@@ -5,6 +5,7 @@ import { useTooltip } from '../hooks/useTooltip'
 import { dismissAllTooltips } from '../lib/tooltipDismiss'
 import ViewportTooltip from './ui/ViewportTooltip'
 import { AiLiquidModeSwitch } from './aiLiquidModeSwitch'
+import { navigateToCanvas } from '../features/canvas'
 import HelpModal from './HelpModal'
 import { useFavoriteCollectionTitle } from './FavoriteCollections'
 import { CodeIcon, HelpCircleIcon, InstallIcon, SettingsIcon } from './ui/icons'
@@ -40,6 +41,11 @@ export default function Header() {
   useEffect(() => {
     if (appMode !== 'gallery') setGallerySearchFocused(false)
   }, [appMode])
+
+  // 对话功能暂时隐藏：持久化状态若停留在 agent，强制回到画廊。
+  useEffect(() => {
+    if (appMode === 'agent') setAppMode('gallery')
+  }, [appMode, setAppMode])
 
   useEffect(() => {
     if (appMode === 'agent' && !agentMobileHeaderVisible) {
@@ -191,8 +197,10 @@ export default function Header() {
             </div>
           )}
           <AiLiquidModeSwitch
-            value={appMode}
-            onChange={setAppMode}
+            value="gallery"
+            onChange={(mode) => {
+              if (mode === 'canvas') navigateToCanvas()
+            }}
             className={`grid w-[116px] shrink-0 transition-all duration-300 ease-out [&_button]:px-2 sm:w-[168px] sm:[&_button]:px-4 ${hideForSearch
               ? 'xl:mr-0 xl:w-0 xl:opacity-0 xl:pointer-events-none'
               : 'mx-1 opacity-100 sm:ml-0 sm:mr-4'

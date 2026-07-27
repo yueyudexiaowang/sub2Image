@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from '../../../store'
 import { useTooltip } from '../../../hooks/useTooltip'
-import { ChevronLeftIcon, CollectionManageIcon, FavoriteIcon, PromptLibraryIcon } from '../../../components/ui/icons'
+import { ChevronLeftIcon, CollectionManageIcon, FavoriteIcon } from '../../../components/ui/icons'
 import ViewportTooltip from '../../../components/ui/ViewportTooltip'
-import PromptLibraryModal from '../../../components/PromptLibraryModal'
 import GalleryFilterButton from './GalleryFilterButton'
 
 function SearchActionButton({
@@ -47,7 +46,6 @@ export default function SearchBar() {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
-  const [showPromptLibrary, setShowPromptLibrary] = useState(false)
   const searchQuery = useStore((s) => s.searchQuery)
   const setSearchQuery = useStore((s) => s.setSearchQuery)
   const filterFavorite = useStore((s) => s.filterFavorite)
@@ -55,19 +53,12 @@ export default function SearchBar() {
   const activeFavoriteCollectionId = useStore((s) => s.activeFavoriteCollectionId)
   const setActiveFavoriteCollectionId = useStore((s) => s.setActiveFavoriteCollectionId)
   const openManageCollectionsModal = useStore((s) => s.openManageCollectionsModal)
-  const setPrompt = useStore((s) => s.setPrompt)
-  const showToast = useStore((s) => s.showToast)
   const inCollectionOverview = filterFavorite && !activeFavoriteCollectionId
-  const favoriteTooltip = activeFavoriteCollectionId ? '返回收藏夹' : filterFavorite ? '退出收藏夹' : '收藏夹'
+  const favoriteTooltip = activeFavoriteCollectionId ? '返回素材库' : filterFavorite ? '退出素材库' : '素材库'
   const leftClass = `shrink-0 overflow-hidden transition-[max-width,margin,opacity,transform] duration-300 ease-out sm:mr-2 sm:max-w-10 sm:translate-x-0 sm:opacity-100 sm:pointer-events-auto ${focused
     ? 'mr-0 max-w-0 -translate-x-2 opacity-0 pointer-events-none'
     : 'mr-2 max-w-10 translate-x-0 opacity-100'
   }`
-  const rightClass = `shrink-0 overflow-hidden transition-[max-width,margin,opacity,transform] duration-300 ease-out sm:ml-2 sm:max-w-10 sm:translate-x-0 sm:opacity-100 sm:pointer-events-auto ${focused
-    ? 'ml-0 max-w-0 translate-x-2 opacity-0 pointer-events-none'
-    : 'ml-2 max-w-10 translate-x-0 opacity-100'
-  }`
-
   useEffect(() => {
     const handleDocumentMouseDown = (event: MouseEvent) => {
       if (document.activeElement !== inputRef.current) return
@@ -110,7 +101,7 @@ export default function SearchBar() {
         {inCollectionOverview && (
           <div className={leftClass}>
             <SearchActionButton
-              tooltip="管理收藏夹"
+              tooltip="管理素材集"
               onClick={openManageCollectionsModal}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-sidebar text-gray-400 transition-colors hover:bg-muted dark:border-white/[0.08] dark:bg-gray-900 dark:hover:bg-white/[0.06]"
             >
@@ -145,29 +136,11 @@ export default function SearchBar() {
                 if (e.key === 'Escape') inputRef.current?.blur()
               }}
               type="text"
-              placeholder={inCollectionOverview ? '搜索收藏夹名称...' : '搜索提示词、参数...'}
+              placeholder={inCollectionOverview ? '搜索素材集名称...' : '搜索提示词、参数...'}
               className="h-10 w-full rounded-full border border-border bg-sidebar pl-10 pr-3 text-sm transition-[border-color,box-shadow,background-color] duration-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-white/[0.08] dark:bg-gray-900"
             />
         </div>
-        <div className={rightClass}>
-          <SearchActionButton
-            tooltip="提示词库"
-            onClick={() => setShowPromptLibrary(true)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-sidebar text-gray-500 transition-colors hover:bg-muted hover:text-gray-900 dark:border-white/[0.08] dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.07] dark:hover:text-gray-100"
-          >
-            <PromptLibraryIcon className="h-5 w-5" />
-          </SearchActionButton>
-        </div>
       </div>
-      <PromptLibraryModal
-        open={showPromptLibrary}
-        onClose={() => setShowPromptLibrary(false)}
-        onUse={(item) => {
-          setPrompt(item.prompt)
-          setShowPromptLibrary(false)
-          showToast('已填入提示词', 'success')
-        }}
-      />
     </>
   )
 }

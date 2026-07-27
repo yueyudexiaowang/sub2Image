@@ -14,15 +14,21 @@ import {
 } from '../../features/conversationComposer'
 import type { PromptProject, PromptStudioToolBundle } from '../../features/promptStudio'
 import GallerySelectionActionBar from '../../features/gallery/components/GallerySelectionActionBar'
-import { ImageIcon, VideoIcon } from '../../components/ui/icons'
+import { FavoriteIcon, ImageIcon, PromptLibraryIcon, VideoIcon } from '../../components/ui/icons'
 import { AiLiquidButton } from '../../components/aiLiquidButton'
+import PromptLibraryModal from '../../components/PromptLibraryModal'
+import { getActiveApiProfile, getAgentImageApiProfile, getAgentTextApiProfile, getAgentVideoApiProfile } from '../../lib/apiProfiles'
+import { isCanvasPath } from '../../features/canvas/canvasRoutes'
+import { useCanvasGenerationStore } from '../../features/canvas/store/canvasGenerationStore'
 import { clearActiveComposerOwner, isComposerFocused, NEXT_COMPOSER_OWNER, setActiveComposerOwner } from './composerFocus'
-import { conversationTools, SUB2_CHAT_TOOL_ID, SUB2_IMAGE_TOOL_ID, SUB2_VIDEO_TOOL_ID } from './conversationTools'
+import { conversationTools, SUB2_CANVAS_TOOL_ID, SUB2_CHAT_TOOL_ID, SUB2_IMAGE_TOOL_ID, SUB2_VIDEO_TOOL_ID } from './conversationTools'
 import { registerSub2ImageMessageRenderers } from './conversationMessageRenderers'
 import { addInputDropData, addInputImageFiles, MAX_INPUT_IMAGES, replaceInputImageFile } from './inputFiles'
 import { loadSub2ImagePromptStudio } from './sub2ImagePromptTool'
 import { loadSub2VideoPromptStudio } from './sub2VideoPromptTool'
 import type { TaskParams, VideoParams } from '../../types'
+import Sub2AssetLibraryModal from './Sub2AssetLibraryModal'
+import Sub2CanvasTextComposerSettings from './Sub2CanvasTextComposerSettings'
 import Sub2ImageAttachmentPreview from './Sub2ImageAttachmentPreview'
 import Sub2ImageComposerSettings from './Sub2ImageComposerSettings'
 import Sub2ImagePromptAgentCard from './Sub2ImagePromptAgentCard'
@@ -138,6 +144,8 @@ export default function Sub2ImageConversationComposer() {
   const [generationMode, setGenerationMode] = useState<'image' | 'video'>('image')
   const [promptStarting, setPromptStarting] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showPromptLibrary, setShowPromptLibrary] = useState(false)
+  const [showAssetLibrary, setShowAssetLibrary] = useState(false)
   const [showAgentWelcome, setShowAgentWelcome] = useState(false)
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const promptDraftEditedRef = useRef(false)
@@ -146,13 +154,24 @@ export default function Sub2ImageConversationComposer() {
     tools: conversationTools,
     onToolLoaded: (_toolId, module) => registerSub2ImageMessageRenderers(module.messageRenderers),
   }), [])
-  const isVideo = appMode === 'gallery' && generationMode === 'video'
+  // 画布模式：画布页选中空图片/视频节点时，composer 以 canvas 类型工作
+  const canvasTarget = useCanvasGenerationStore((state) => state.target)
+  const isCanvas = canvasTarget !== null && isCanvasPath(window.location.pathname)
+  const isCanvasText = isCanvas && canvasTarget.kind === 'text'
+  const isVideo = isCanvas ? canvasTarget.kind === 'video' : appMode === 'gallery' && generationMode === 'video'
+  // 触发按钮展示当前生效的模型名（Sub2 hybrid 模式取 agent profile，否则取激活 profile）
+  const imageModelLabel = (settings.agentApiConfigMode === 'hybrid'
+    ? getAgentImageApiProfile(settings)
+    : getActiveApiProfile(settings))?.model || '选择模型'
+  const videoModelLabel = getAgentVideoApiProfile(settings)?.model || '选择模型'
+  const textModelLabel = getAgentTextApiProfile(settings)?.model || '选择模型'
   const promptConversationId = isVideo ? VIDEO_PROMPT_CONVERSATION_ID : PROMPT_CONVERSATION_ID
   const promptOutputSettings = isVideo
     ? getVideoPromptOutputSettings(settings.videoParams)
     : getPromptOutputSettings(params)
-  const toolId = appMode === 'agent' ? SUB2_CHAT_TOOL_ID : isVideo ? SUB2_VIDEO_TOOL_ID : SUB2_IMAGE_TOOL_ID
-  const conversationId = appMode === 'agent' ? activeConversationId ?? 'active-agent' : promptConversationId
+  const canvasConversationId = isCanvas ? `canvas:${canvasTarget.documentId}:${canvasTarget.nodeId}` : null
+  const toolId = isCanvas ? SUB2_CANVAS_TOOL_ID : appMode === 'agent' ? SUB2_CHAT_TOOL_ID : isVideo ? SUB2_VIDEO_TOOL_ID : SUB2_IMAGE_TOOL_ID
+  const conversationId = canvasConversationId ?? (appMode === 'agent' ? activeConversationId ?? 'active-agent' : promptConversationId)
   const scope = useMemo(() => ({ conversationId, toolId }), [conversationId, toolId])
   const selectedSkill = getAgentSkillMention(prompt)
   const agentSelected = promptAgentSelected || Boolean(selectedSkill)
@@ -400,7 +419,8 @@ export default function Sub2ImageConversationComposer() {
     const draft = loadComposerDraft()
     const state = useStore.getState()
     const requestScope = {
-      conversationId: appMode === 'agent' ? state.activeAgentConversationId ?? state.createAgentConversation() : promptConversationId,
+      conversationId: canvasConversationId
+        ?? (appMode === 'agent' ? state.activeAgentConversationId ?? state.createAgentConversation() : promptConversationId),
       toolId,
     }
     refreshRuntime()
@@ -563,7 +583,7 @@ export default function Sub2ImageConversationComposer() {
             maxWidth: 'min(56rem, calc(100vw - var(--workspace-sidebar-width, 0px)))',
           }}
         >
-          {appMode === 'gallery' && <GallerySelectionActionBar />}
+          {appMode === 'gallery' && !isCanvas && <GallerySelectionActionBar />}
           {showAgentWelcome && (
             <div
               className="cc-agent-welcome"
@@ -651,7 +671,7 @@ export default function Sub2ImageConversationComposer() {
                     }}
                   />
                 )}
-                toolSlot={appMode === 'gallery' ? (
+                toolSlot={(<div className="flex items-center gap-1.5">{isCanvas ? null : appMode === 'gallery' ? (
                   agentSelected ? (
                       <AiLiquidButton
                         size="sm"
@@ -692,17 +712,42 @@ export default function Sub2ImageConversationComposer() {
                       Agent
                     </button>
                   )}
+                  <button
+                    type="button"
+                    title="提示词库"
+                    aria-label="提示词库"
+                    className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 text-[13px] text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.14] dark:hover:text-gray-100"
+                    onClick={() => setShowPromptLibrary(true)}
+                  >
+                    <PromptLibraryIcon className="h-4 w-4 shrink-0" />
+                    <span className="hidden sm:inline">提示词库</span>
+                  </button>
+                  {!isCanvas && (
+                    <button
+                      type="button"
+                      title="素材库"
+                      aria-label="素材库"
+                      className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 text-[13px] text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-800 dark:bg-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.14] dark:hover:text-gray-100"
+                      onClick={() => setShowAssetLibrary(true)}
+                    >
+                      <FavoriteIcon className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">素材库</span>
+                    </button>
+                  )}
+                </div>)}
                 paramsSlot={(
                   <button
                     type="button"
                     data-composer-settings-trigger
                     className="flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.08] dark:hover:text-gray-100 [&_svg]:h-4 [&_svg]:w-4"
-                    title={isVideo ? '视频设置' : '图片设置'}
+                    title={isCanvasText ? '文本设置' : isVideo ? '视频设置' : '图片设置'}
                     aria-label="生成设置"
                     onClick={() => setShowSettings(true)}
                   >
-                    {isVideo ? <VideoIcon data-generation-icon="video" /> : <ImageIcon data-generation-icon="image" />}
-                    <span>{isVideo ? `Video · ${settings.videoParams.duration}s ×${settings.videoParams.n}` : `Image · ${params.n}x`}</span>
+                    {isCanvasText
+                      ? <span data-generation-icon="text" className="text-sm font-semibold leading-none">T</span>
+                      : isVideo ? <VideoIcon data-generation-icon="video" /> : <ImageIcon data-generation-icon="image" />}
+                    <span className="max-w-[9.5rem] truncate">{isCanvasText ? textModelLabel : isVideo ? videoModelLabel : imageModelLabel}</span>
                   </button>
                 )}
                 onChange={(value) => {
@@ -714,6 +759,10 @@ export default function Sub2ImageConversationComposer() {
                 onCursorChange={setCursor}
                 onEditorKeyCommand={handleEditorKeyCommand}
                 onSubmit={() => {
+                  if (isCanvas) {
+                    void submit()
+                    return
+                  }
                   if (appMode === 'gallery' && selectedSkill) {
                     void submitSkillFromGallery()
                     return
@@ -736,16 +785,19 @@ export default function Sub2ImageConversationComposer() {
                   runtime.stop(scope)
                   refreshRuntime()
                 }}
-                onAttach={inputImages.length < (isVideo ? 1 : MAX_INPUT_IMAGES) ? () => fileInputRef.current?.click() : undefined}
+                onAttach={!isCanvas && inputImages.length < (isVideo ? 1 : MAX_INPUT_IMAGES) ? () => fileInputRef.current?.click() : undefined}
                 onPasteFiles={(files) => {
+                  // 画布模式的参考图来自节点连线，不走附件
+                  if (isCanvas) return
                   promptDraftEditedRef.current = true
                   void addInputImageFiles(files)
                 }}
                 onDropData={(data) => {
+                  if (isCanvas) return
                   promptDraftEditedRef.current = true
                   void addInputDropData(data)
                 }}
-                canHandleDrop={() => isComposerFocused(NEXT_COMPOSER_OWNER)}
+                canHandleDrop={() => !isCanvas && isComposerFocused(NEXT_COMPOSER_OWNER)}
               />
             </div>
           )}
@@ -753,10 +805,11 @@ export default function Sub2ImageConversationComposer() {
           <input ref={replaceInputRef} data-new-composer-replace-input type="file" accept="image/*" className="hidden" onChange={handleReplaceInput} />
         </div>
       )}
-      {showSettings && (isVideo ? (
+      {showSettings && isCanvasText && <Sub2CanvasTextComposerSettings onClose={() => setShowSettings(false)} />}
+      {showSettings && !isCanvasText && (isVideo ? (
           <Sub2VideoComposerSettings
-            mode={generationMode}
-            onModeChange={changeGenerationMode}
+            mode={isCanvas ? undefined : generationMode}
+            onModeChange={isCanvas ? undefined : changeGenerationMode}
             params={settings.videoParams}
             onChange={(videoParams) => {
               useStore.getState().setSettings({ videoParams })
@@ -766,8 +819,8 @@ export default function Sub2ImageConversationComposer() {
           />
         ) : (
           <Sub2ImageComposerSettings
-            mode={appMode === 'gallery' ? generationMode : undefined}
-            onModeChange={appMode === 'gallery' ? changeGenerationMode : undefined}
+            mode={appMode === 'gallery' && !isCanvas ? generationMode : undefined}
+            onModeChange={appMode === 'gallery' && !isCanvas ? changeGenerationMode : undefined}
             onClose={() => setShowSettings(false)}
             onSaved={() => {
               if (!promptOpen) promptDraftEditedRef.current = true
@@ -776,6 +829,21 @@ export default function Sub2ImageConversationComposer() {
             }}
           />
         ))}
+      <Sub2AssetLibraryModal
+        open={showAssetLibrary}
+        onClose={() => setShowAssetLibrary(false)}
+        limit={isVideo ? 1 : MAX_INPUT_IMAGES}
+      />
+      <PromptLibraryModal
+        open={showPromptLibrary}
+        onClose={() => setShowPromptLibrary(false)}
+        onUse={(item) => {
+          promptDraftEditedRef.current = true
+          setPrompt(item.prompt)
+          setShowPromptLibrary(false)
+          useStore.getState().showToast('已填入提示词', 'success')
+        }}
+      />
       {preview && previewIndex != null && (
         <Sub2ImageAttachmentPreview
           src={preview.dataUrl}

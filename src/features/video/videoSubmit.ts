@@ -11,9 +11,11 @@ type SubmitVideoTaskOptions = {
   draft: ComposerDraft
   params: VideoParams
   signal?: AbortSignal
+  /** 无限画布发起的任务：绑定文档与节点，供画布回填结果 */
+  canvasRef?: { documentId: string; nodeId: string }
 }
 
-export async function submitVideoTask({ draft, params, signal }: SubmitVideoTaskOptions) {
+export async function submitVideoTask({ draft, params, signal, canvasRef }: SubmitVideoTaskOptions) {
   const state = useStore.getState()
   const settings = normalizeSettings(state.settings)
   const profile = getAgentVideoApiProfile(settings)
@@ -75,6 +77,7 @@ export async function submitVideoTask({ draft, params, signal }: SubmitVideoTask
     createdAt: now + idx,
     finishedAt: null,
     elapsed: null,
+    ...(canvasRef ? { canvasDocumentId: canvasRef.documentId, canvasNodeId: canvasRef.nodeId } : {}),
   }))
   state.setTasks([...tasks, ...state.tasks])
   await Promise.all(tasks.map((task) => putTask(task)))

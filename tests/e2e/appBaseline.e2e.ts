@@ -120,16 +120,14 @@ test('桌面与移动端只有一个 Composer 且页面模式职责固定', asyn
   await openConfiguredApp(page, 'responses')
   await expectSingleComposer(page)
   expect(await page.locator('.cc-agent-button').count()).toBe(1)
-  expect(await page.locator('[data-conversation-composer-dock] [title="提示词库"]').count()).toBe(0)
+  // 提示词库入口已整合进 composer 工具栏（2026-07 需求）
+  expect(await page.locator('[data-conversation-composer-dock] [title="提示词库"]').count()).toBe(1)
   await saveArtifact(`${testInfo.project.name}-gallery.png`, await page.screenshot({ animations: 'disabled', caret: 'hide' }))
 
-  await page.locator('[data-app-header]').getByRole('button', { name: '对话', exact: true }).click()
-  await expect(page.locator('[data-agent-workspace]')).toBeVisible()
-  await expect(page.locator('[contenteditable][aria-label="Agent 对话输入"]')).toBeVisible()
-  await expect(page.locator('.cc-agent-button')).toHaveCount(1)
-  await expect(page.locator('.cc-agent-button')).toHaveAttribute('aria-pressed', 'false')
-  await expectSingleComposer(page)
-  await saveArtifact(`${testInfo.project.name}-agent.png`, await page.screenshot({ animations: 'disabled', caret: 'hide' }))
+  // 对话入口已隐藏，顶部切换指向无限画布
+  await page.locator('[data-app-header]').getByRole('button', { name: '无限画布', exact: true }).click()
+  await expect(page.getByRole('button', { name: '新建画布' })).toBeVisible()
+  await saveArtifact(`${testInfo.project.name}-canvas.png`, await page.screenshot({ animations: 'disabled', caret: 'hide' }))
   expect(errors).toEqual([])
 })
 
@@ -154,7 +152,8 @@ test('画廊直发只创建一次图片任务', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
-test('普通 Agent 页面完成聊天闭环', async ({ page }) => {
+// 对话功能暂时隐藏（顶部切换已指向无限画布），入口恢复后再启用本用例
+test.skip('普通 Agent 页面完成聊天闭环', async ({ page }) => {
   const errors = trackPageErrors(page)
   let requests = 0
   await page.route(`${API_URL}/**`, async (route: Route) => {

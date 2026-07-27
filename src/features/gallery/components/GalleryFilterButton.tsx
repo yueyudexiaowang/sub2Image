@@ -138,7 +138,7 @@ export default function GalleryFilterButton() {
             </section>
 
             <section>
-              <h3 className="mb-3 text-xs font-medium text-gray-400">收藏与云端</h3>
+              <h3 className="mb-3 text-xs font-medium text-gray-400">素材与云端</h3>
               <button
                 type="button"
                 aria-pressed={filterFavorite}
@@ -148,7 +148,7 @@ export default function GalleryFilterButton() {
                 <span className={`flex h-4 w-4 items-center justify-center rounded-sm border ${filterFavorite ? 'border-yellow-500 bg-yellow-500' : 'border-gray-400 dark:border-gray-500'}`}>
                   {filterFavorite && <span className="h-1.5 w-1.5 rounded-[1px] bg-white" />}
                 </span>
-                仅看收藏
+                仅看素材
               </button>
               <button
                 type="button"

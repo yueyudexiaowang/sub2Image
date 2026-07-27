@@ -7,103 +7,94 @@ import {
 import { useStore } from '../../../store'
 import { normalizeAgentMaxToolRounds } from '../../../lib/apiProfiles'
 import {
-  getSub2Token,
-  listSub2Keys,
-  listSub2Models,
   OPEN_SUB2_CONNECT_EVENT,
   type Sub2Key,
 } from '../../../lib/sub2api'
+import {
+  fetchActiveSub2Keys,
+  formatSub2GroupLabel,
+  formatSub2ModelLabel,
+  loadSub2GroupModels,
+  makeGroupModelValue,
+  parseGroupModelValue,
+  pickGroupKey,
+  type Sub2GroupModels,
+} from '../../../lib/sub2ModelCatalog'
 import { syncSub2Settings } from '../../../lib/sub2Profiles'
-import Select from '../../../components/ui/Select'
+import { useSub2Auth } from '../../../hooks/useSub2Auth'
+import Select, { type SelectOption } from '../../../components/ui/Select'
+import SettingToggleRow from './SettingToggleRow'
 
 interface AgentSettingsTabProps {
-  draft: AppSettings
+  settings: AppSettings
   agentMaxToolRoundsInput: string
   setAgentMaxToolRoundsInput: (value: string) => void
-  commitSettings: (nextDraft: AppSettings) => void
+  commitSettings: (nextSettings: AppSettings) => void
   commitAgentMaxToolRounds: () => void
 }
 
+const KIND_LABEL = { text: '文本', image: '图像', video: '视频' } as const
+
 export default function AgentSettingsTab({
-  draft,
+  settings,
   agentMaxToolRoundsInput,
   setAgentMaxToolRoundsInput,
   commitSettings,
   commitAgentMaxToolRounds,
 }: AgentSettingsTabProps) {
   const showToast = useStore((s) => s.showToast)
-  const textConfig = draft.sub2Configs.find((config) => config.profileId === draft.agentTextProfileId)
-    ?? draft.sub2Configs.find((config) => config.kind === 'text')
-  const imageConfig = draft.sub2Configs.find((config) => config.profileId === draft.agentImageProfileId)
-    ?? draft.sub2Configs.find((config) => config.kind === 'image')
-  const videoConfig = draft.sub2Configs.find((config) => config.profileId === draft.agentVideoProfileId)
-    ?? draft.sub2Configs.find((config) => config.kind === 'video')
+  const { loggedIn } = useSub2Auth()
+  const textConfig = settings.sub2Configs.find((config) => config.profileId === settings.agentTextProfileId)
+    ?? settings.sub2Configs.find((config) => config.kind === 'text')
+  const imageConfig = settings.sub2Configs.find((config) => config.profileId === settings.agentImageProfileId)
+    ?? settings.sub2Configs.find((config) => config.kind === 'image')
+  const videoConfig = settings.sub2Configs.find((config) => config.profileId === settings.agentVideoProfileId)
+    ?? settings.sub2Configs.find((config) => config.kind === 'video')
   const [keys, setKeys] = useState<Sub2Key[]>([])
-  const [textGroupId, setTextGroupId] = useState(textConfig?.groupId ?? 0)
-  const [imageGroupId, setImageGroupId] = useState(imageConfig?.groupId ?? 0)
-  const [videoKeyId, setVideoKeyId] = useState(videoConfig?.keyId ?? 0)
-  const [textModel, setTextModel] = useState(textConfig?.model ?? '')
-  const [imageModel, setImageModel] = useState(imageConfig?.model ?? '')
-  const [videoModel, setVideoModel] = useState(videoConfig?.model ?? '')
-  const [textModels, setTextModels] = useState<string[]>([])
-  const [imageModels, setImageModels] = useState<string[]>([])
-  const [videoModels, setVideoModels] = useState<string[]>([])
-  const [loading, setLoading] = useState<'keys' | 'text' | 'image' | 'video' | ''>('')
+  const [groupModels, setGroupModels] = useState<Sub2GroupModels[]>([])
+  const [textValue, setTextValue] = useState(textConfig?.model ? makeGroupModelValue(textConfig.groupId, textConfig.model) : '')
+  const [imageValue, setImageValue] = useState(imageConfig?.model ? makeGroupModelValue(imageConfig.groupId, imageConfig.model) : '')
+  const [videoValue, setVideoValue] = useState(videoConfig?.model ? makeGroupModelValue(videoConfig.groupId, videoConfig.model) : '')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const activeKeys = useMemo(() => keys.filter((item) => item.status === 'active' && item.group_id != null), [keys])
-  const keyMap = useMemo(() => new Map(activeKeys.map((item) => [item.id, item.key])), [activeKeys])
-  const groupOptions = useMemo(() => {
-    const groups = new Map<number, { label: string; value: number }>()
-    activeKeys.forEach((item) => {
-      const id = Number(item.group_id)
-      if (groups.has(id)) return
-      const name = item.group?.name || `分组 ${id}`
-      groups.set(id, {
-        label: item.group?.platform ? `${name} · ${item.group.platform}` : name,
-        value: id,
+  const keyMap = useMemo(() => new Map(keys.map((item) => [item.id, item.key])), [keys])
+
+  /** 单个分组选择器的选项：分组名作分节标题，模型作可选项。 */
+  const buildGroupedOptions = (placeholder: string): SelectOption[] => {
+    const options: SelectOption[] = [{
+      value: '',
+      label: loading ? '正在读取...' : groupModels.length ? placeholder : '暂无可用分组',
+    }]
+    groupModels.forEach((group) => {
+      if (!group.models.length) return
+      options.push({
+        value: `group-${group.groupId}`,
+        label: formatSub2GroupLabel(group.groupName, group.platform, group.groupId),
+        heading: true,
+      })
+      group.models.forEach((model) => {
+        options.push({
+          value: makeGroupModelValue(group.groupId, model.id),
+          label: formatSub2ModelLabel(model),
+        })
       })
     })
-    return [...groups.values()]
-  }, [activeKeys])
-
-  const loadModels = async (kind: Sub2Config['kind'], groupId: number, items = activeKeys, selectedKeyId?: number) => {
-    const savedKeyId = selectedKeyId ?? (kind === 'text' ? textConfig?.keyId : kind === 'image' ? imageConfig?.keyId : videoConfig?.keyId)
-    const key = items.find((item) => item.id === savedKeyId && Number(item.group_id) === groupId)
-      ?? items.find((item) => Number(item.group_id) === groupId)
-    if (!key) return
-
-    setLoading(kind)
-    setError('')
-    try {
-      const models = (await listSub2Models(key.key)).map((item) => item.id)
-      if (kind === 'text') {
-        setTextModels(models)
-        if (!models.includes(textModel)) setTextModel('')
-      } else if (kind === 'image') {
-        setImageModels(models)
-        if (!models.includes(imageModel)) setImageModel('')
-      } else {
-        setVideoModels(models)
-        if (!models.includes(videoModel)) setVideoModel('')
-      }
-      if (!models.length) setError(`所选分组没有可用的${kind === 'text' ? '文本' : kind === 'image' ? '图像' : '视频'}模型`)
-    } catch (err) {
-      console.error('[Sub2API] 获取分组模型失败', { kind, groupId, err })
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading('')
-    }
+    return options
   }
 
-  const loadKeys = async () => {
-    setLoading('keys')
+  const hasSelectableModels = groupModels.some((group) => group.models.length > 0)
+
+  const loadKeys = async (force = false) => {
+    setLoading(true)
     setError('')
     try {
-      const items = (await listSub2Keys()).filter((item) => item.status === 'active' && item.group_id != null)
-      const textProfile = draft.profiles.find((profile) => profile.id === textConfig?.profileId)
-      const imageProfile = draft.profiles.find((profile) => profile.id === imageConfig?.profileId)
-      const videoProfile = draft.profiles.find((profile) => profile.id === videoConfig?.profileId)
+      const items = await fetchActiveSub2Keys(force)
+      // 异步回调里读最新 settings，避免闭包里的旧值覆盖外部改动
+      const current = useStore.getState().settings
+      const textProfile = current.profiles.find((profile) => profile.id === textConfig?.profileId)
+      const imageProfile = current.profiles.find((profile) => profile.id === imageConfig?.profileId)
+      const videoProfile = current.profiles.find((profile) => profile.id === videoConfig?.profileId)
       const textKey = items.find((item) => item.id === textConfig?.keyId)
       const imageKey = items.find((item) => item.id === imageConfig?.keyId)
       const videoKey = items.find((item) => item.id === videoConfig?.keyId)
@@ -114,98 +105,116 @@ export default function AgentSettingsTab({
       )
       setKeys(items)
       if (accountChanged) {
-        setTextGroupId(0)
-        setImageGroupId(0)
-        setVideoKeyId(0)
-        setTextModel('')
-        setImageModel('')
-        setVideoModel('')
-        setTextModels([])
-        setImageModels([])
-        setVideoModels([])
-        commitSettings(syncSub2Settings(draft, [], new Map()))
+        setTextValue('')
+        setImageValue('')
+        setVideoValue('')
+        setGroupModels([])
+        commitSettings(syncSub2Settings(current, [], new Map()))
         showToast('账号分组已变化，请重新配置 Agent 模型', 'info')
         return
       }
 
-      const nextTextGroupId = items.some((item) => Number(item.group_id) === textGroupId) ? textGroupId : 0
-      const nextImageGroupId = items.some((item) => Number(item.group_id) === imageGroupId) ? imageGroupId : 0
-      const nextVideoKeyId = items.some((item) => item.id === videoKeyId) ? videoKeyId : 0
-      setTextGroupId(nextTextGroupId)
-      setImageGroupId(nextImageGroupId)
-      setVideoKeyId(nextVideoKeyId)
-      if (!nextTextGroupId) setTextModel('')
-      if (!nextImageGroupId) setImageModel('')
-      if (!nextVideoKeyId) setVideoModel('')
-      if (nextTextGroupId) await loadModels('text', nextTextGroupId, items)
-      if (nextImageGroupId) await loadModels('image', nextImageGroupId, items)
-      const nextVideoKey = items.find((item) => item.id === nextVideoKeyId)
-      if (nextVideoKey?.group_id != null) await loadModels('video', Number(nextVideoKey.group_id), items, nextVideoKey.id)
+      const groups = await loadSub2GroupModels(items, force)
+      setGroupModels(groups)
+
+      // 校验已选值仍然有效（分组还在、模型还在列表中），否则清空
+      const validate = (value: string) => {
+        const parsed = parseGroupModelValue(value)
+        if (!parsed) return ''
+        const group = groups.find((item) => item.groupId === parsed.groupId)
+        return group?.models.some((model) => model.id === parsed.model) ? value : ''
+      }
+      setTextValue((value) => validate(value))
+      setImageValue((value) => validate(value))
+      setVideoValue((value) => validate(value))
+
+      const failed = groups.filter((group) => group.error)
+      if (failed.length) {
+        setError(`部分分组模型获取失败：${failed.map((group) => formatSub2GroupLabel(group.groupName, group.platform, group.groupId)).join('、')}`)
+      } else if (!groups.some((group) => group.models.length)) {
+        setError('没有可用的分组模型')
+      }
     } catch (err) {
       console.error('[Sub2API] 获取用户分组失败', err)
       setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setLoading('')
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (getSub2Token()) void loadKeys()
-  }, [])
-
-  const saveConfigs = () => {
-    const textKey = activeKeys.find((item) => item.id === textConfig?.keyId && Number(item.group_id) === textGroupId)
-      ?? activeKeys.find((item) => Number(item.group_id) === textGroupId)
-    const imageKey = activeKeys.find((item) => item.id === imageConfig?.keyId && Number(item.group_id) === imageGroupId)
-      ?? activeKeys.find((item) => Number(item.group_id) === imageGroupId)
-    const videoKey = activeKeys.find((item) => item.id === videoKeyId)
-    if (!textKey || !imageKey || !textModel || !imageModel) return
-    if ((videoKeyId || videoModel) && (!videoKey || !videoModel)) return
-
-    const textId = textConfig?.id ?? `agent-text-${Date.now().toString(36)}`
-    const imageId = imageConfig?.id ?? `agent-image-${Date.now().toString(36)}`
-    const videoId = videoConfig?.id ?? `agent-video-${Date.now().toString(36)}`
-    const nextText: Sub2Config = {
-      id: textId,
-      name: 'Agent 文本',
-      kind: 'text',
-      keyId: textKey.id,
-      keyName: textKey.name,
-      groupId: Number(textKey.group_id),
-      groupName: textKey.group?.name || '',
-      platform: textKey.group?.platform || '',
-      model: textModel,
-      profileId: textConfig?.profileId ?? `sub2api-text-${textId}`,
+    if (loggedIn) void loadKeys()
+    else {
+      setKeys([])
+      setGroupModels([])
     }
-    const nextImage: Sub2Config = {
-      id: imageId,
-      name: 'Agent 图像',
-      kind: 'image',
-      keyId: imageKey.id,
-      keyName: imageKey.name,
-      groupId: Number(imageKey.group_id),
-      groupName: imageKey.group?.name || '',
-      platform: imageKey.group?.platform || '',
-      model: imageModel,
-      profileId: imageConfig?.profileId ?? `sub2api-image-${imageId}`,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn])
+
+  /** 从复合值解析出保存所需的 Key/分组/模型。 */
+  const resolveSelection = (value: string, preferredKeyId?: number) => {
+    const parsed = parseGroupModelValue(value)
+    if (!parsed) return null
+    const group = groupModels.find((item) => item.groupId === parsed.groupId)
+    if (!group) return null
+    const key = pickGroupKey(group.keys, preferredKeyId)
+    if (!key) return null
+    return { key, group, model: parsed.model }
+  }
+
+  const buildConfig = (
+    kind: Sub2Config['kind'],
+    selection: NonNullable<ReturnType<typeof resolveSelection>>,
+    existing: Sub2Config | undefined,
+  ): Sub2Config => {
+    const id = existing?.id ?? `agent-${kind}-${Date.now().toString(36)}`
+    return {
+      id,
+      name: `Agent ${KIND_LABEL[kind]}`,
+      kind,
+      keyId: selection.key.id,
+      keyName: selection.key.name,
+      groupId: selection.group.groupId,
+      groupName: selection.group.groupName,
+      platform: selection.group.platform,
+      model: selection.model,
+      profileId: existing?.profileId ?? `sub2api-${kind}-${id}`,
     }
-    const nextVideo: Sub2Config | null = videoKey && videoModel ? {
-      id: videoId,
-      name: 'Agent 视频',
-      kind: 'video',
-      keyId: videoKey.id,
-      keyName: videoKey.name,
-      groupId: Number(videoKey.group_id),
-      groupName: videoKey.group?.name || '',
-      platform: videoKey.group?.platform || '',
-      model: videoModel,
-      profileId: videoConfig?.profileId ?? `sub2api-video-${videoId}`,
-    } : null
-    const configs = draft.sub2Configs
-      .filter((config) => config.kind !== 'text' && config.kind !== 'image' && config.kind !== 'video')
-      .concat(nextText, nextImage, ...(nextVideo ? [nextVideo] : []))
-    commitSettings(syncSub2Settings(draft, configs, keyMap, nextImage.profileId))
-    showToast('Agent 模型配置已保存', 'success')
+  }
+
+  /** 选中即生效：只变更当前编辑的 kind，其余配置原样保留（与聊天浮层行为一致）。 */
+  const applySelection = (kind: Sub2Config['kind'], rawValue: string | number) => {
+    const value = String(rawValue)
+    if (kind === 'text') setTextValue(value)
+    else if (kind === 'image') setImageValue(value)
+    else setVideoValue(value)
+
+    const existing = kind === 'text' ? textConfig : kind === 'image' ? imageConfig : videoConfig
+
+    // 视频支持选择“不配置”清除已有配置
+    if (!value) {
+      if (kind === 'video' && videoConfig) {
+        const configs = settings.sub2Configs.filter((config) => config.kind !== 'video')
+        commitSettings(syncSub2Settings(settings, configs, keyMap, imageConfig?.profileId))
+        showToast('已取消视频模型配置', 'success')
+      }
+      return
+    }
+
+    const selection = resolveSelection(value, existing?.keyId)
+    if (!selection) {
+      showToast('所选分组暂不可用，请点击“刷新”后重试', 'error')
+      return
+    }
+    if (existing && existing.model === selection.model && existing.groupId === selection.group.groupId) return
+
+    const nextConfig = buildConfig(kind, selection, existing)
+    const configs = settings.sub2Configs
+      .filter((config) => config.kind !== kind)
+      .concat(nextConfig)
+    const preferredActiveId = kind === 'image' ? nextConfig.profileId : imageConfig?.profileId
+    commitSettings(syncSub2Settings(settings, configs, keyMap, preferredActiveId))
+    showToast(`${KIND_LABEL[kind]}模型已切换为 ${selection.model}`, 'success')
   }
 
   return (
@@ -214,7 +223,7 @@ export default function AgentSettingsTab({
         Agent 固定使用 Sub2API 混合模式，文本、图像和视频模型分别配置。
       </div>
 
-      {!getSub2Token() ? (
+      {!loggedIn ? (
         <button
           type="button"
           onClick={() => {
@@ -229,171 +238,99 @@ export default function AgentSettingsTab({
         <>
           <div className="flex items-center justify-between gap-3 border-b border-gray-200/70 pb-3 dark:border-white/[0.08]">
             <span className="text-sm font-medium text-gray-800 dark:text-gray-100">分组模型</span>
-            <button type="button" disabled={Boolean(loading)} onClick={() => void loadKeys()} className="rounded-lg px-3 py-1.5 text-xs text-blue-500 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-500/10">刷新</button>
+            <button type="button" disabled={loading} onClick={() => void loadKeys(true)} className="rounded-lg px-3 py-1.5 text-xs text-blue-500 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-500/10">刷新</button>
           </div>
 
-          <section className="space-y-3 border-b border-gray-200/70 pb-5 dark:border-white/[0.08]">
-            <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100">文本</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="block text-xs text-gray-500">
-                文本分组
-                <Select
-                  value={textGroupId || ''}
-                  disabled={!groupOptions.length || Boolean(loading)}
-                  onChange={(value) => {
-                    const id = Number(value)
-                    setTextGroupId(id)
-                    setTextModel('')
-                    setTextModels([])
-                    if (id) void loadModels('text', id)
-                  }}
-                  options={[
-                    { value: '', label: groupOptions.length ? '请选择文本分组' : '暂无可用分组' },
-                    ...groupOptions,
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
-              <div className="block text-xs text-gray-500">
-                文本模型
-                <Select
-                  value={textModel}
-                  disabled={!textModels.length || Boolean(loading)}
-                  onChange={(value) => setTextModel(String(value))}
-                  options={[
-                    { value: '', label: loading === 'text' ? '正在读取...' : '请选择文本模型' },
-                    ...textModels.map((id) => ({ value: id, label: id })),
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="block text-xs text-gray-500">
+              文本模型
+              <Select
+                value={textValue}
+                disabled={!hasSelectableModels || loading}
+                onChange={(value) => applySelection('text', value)}
+                options={buildGroupedOptions('请选择文本模型')}
+                ariaLabel="文本模型"
+                className="mt-1.5 w-full"
+              />
             </div>
-          </section>
-
-          <section className="space-y-3 border-b border-gray-200/70 pb-5 dark:border-white/[0.08]">
-            <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100">图像</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="block text-xs text-gray-500">
-                图像分组
-                <Select
-                  value={imageGroupId || ''}
-                  disabled={!groupOptions.length || Boolean(loading)}
-                  onChange={(value) => {
-                    const id = Number(value)
-                    setImageGroupId(id)
-                    setImageModel('')
-                    setImageModels([])
-                    if (id) void loadModels('image', id)
-                  }}
-                  options={[
-                    { value: '', label: groupOptions.length ? '请选择图像分组' : '暂无可用分组' },
-                    ...groupOptions,
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
-              <div className="block text-xs text-gray-500">
-                图像模型
-                <Select
-                  value={imageModel}
-                  disabled={!imageModels.length || Boolean(loading)}
-                  onChange={(value) => setImageModel(String(value))}
-                  options={[
-                    { value: '', label: loading === 'image' ? '正在读取...' : '请选择图像模型' },
-                    ...imageModels.map((id) => ({ value: id, label: id })),
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
+            <div className="block text-xs text-gray-500">
+              图像模型
+              <Select
+                value={imageValue}
+                disabled={!hasSelectableModels || loading}
+                onChange={(value) => applySelection('image', value)}
+                options={buildGroupedOptions('请选择图像模型')}
+                ariaLabel="图像模型"
+                className="mt-1.5 w-full"
+              />
             </div>
-          </section>
-
-          <section className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100">视频</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="block text-xs text-gray-500">
-                视频 Key
-                <Select
-                  value={videoKeyId || ''}
-                  disabled={!activeKeys.length || Boolean(loading)}
-                  onChange={(value) => {
-                    const id = Number(value)
-                    setVideoKeyId(id)
-                    setVideoModel('')
-                    setVideoModels([])
-                    const key = activeKeys.find((item) => item.id === id)
-                    if (key?.group_id != null) void loadModels('video', Number(key.group_id), activeKeys, key.id)
-                  }}
-                  options={[
-                    { value: '', label: activeKeys.length ? '不配置视频模型' : '暂无可用 Key' },
-                    ...activeKeys.map((item) => ({
-                      value: item.id,
-                      label: item.group?.name ? `${item.name} · ${item.group.name}` : item.name,
-                    })),
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
-              <div className="block text-xs text-gray-500">
-                视频模型
-                <Select
-                  value={videoModel}
-                  disabled={!videoModels.length || Boolean(loading)}
-                  onChange={(value) => setVideoModel(String(value))}
-                  options={[
-                    { value: '', label: loading === 'video' ? '正在读取...' : '请选择视频模型' },
-                    ...videoModels.map((id) => ({ value: id, label: id })),
-                  ]}
-                  className="mt-1.5 w-full"
-                />
-              </div>
+            <div className="block text-xs text-gray-500">
+              视频模型
+              <Select
+                value={videoValue}
+                disabled={!hasSelectableModels || loading}
+                onChange={(value) => applySelection('video', value)}
+                options={buildGroupedOptions('不配置视频模型')}
+                ariaLabel="视频模型"
+                className="mt-1.5 w-full"
+              />
             </div>
-          </section>
+          </div>
 
-          {error && <div className="border-l-2 border-red-500 bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300">{error}</div>}
-          <button type="button" disabled={!textGroupId || !imageGroupId || !textModel || !imageModel || Boolean(videoKeyId) !== Boolean(videoModel) || Boolean(loading)} onClick={saveConfigs} className="w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40">保存 Agent 模型配置</button>
+          {error && <div role="alert" className="border-l-2 border-red-500 bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-500/10 dark:text-red-300">{error}</div>}
+          <div data-selectable-text className="text-xs leading-relaxed text-gray-500 dark:text-gray-500">
+            选中即生效，无需保存。与聊天输入框中的模型选择互通。
+          </div>
         </>
       )}
 
-      <label className="block">
-        <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">最大工具调用轮数</span>
-        <input
-          value={agentMaxToolRoundsInput}
-          onChange={(e) => setAgentMaxToolRoundsInput(e.target.value)}
-          onBlur={commitAgentMaxToolRounds}
-          type="number"
-          min={1}
-          max={50}
-          className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
-        />
-        <div data-selectable-text className="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-500">
-          默认 15。用于限制 Agent 连续调用工具时的最大轮数，防止无限循环。
-        </div>
-      </label>
+      <div className="space-y-4 border-t border-gray-200/70 pt-5 dark:border-white/[0.08]">
+        <label className="block">
+          <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">最大工具调用轮数</span>
+          <input
+            value={agentMaxToolRoundsInput}
+            onChange={(e) => setAgentMaxToolRoundsInput(e.target.value)}
+            onBlur={commitAgentMaxToolRounds}
+            type="number"
+            min={1}
+            max={50}
+            className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
+          />
+          <div data-selectable-text className="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-500">
+            默认 15。用于限制 Agent 连续调用工具时的最大轮数，防止无限循环。
+          </div>
+        </label>
 
-      <div className="block">
-        <div className="mb-1 flex items-center justify-between gap-3">
-          <span className="block text-sm text-gray-600 dark:text-gray-300">网络搜索</span>
-          <button
-            type="button"
-            onClick={() => {
-              const agentMaxToolRounds = agentMaxToolRoundsInput.trim() === ''
-                ? DEFAULT_AGENT_MAX_TOOL_ROUNDS
-                : normalizeAgentMaxToolRounds(agentMaxToolRoundsInput, draft.agentMaxToolRounds)
-              setAgentMaxToolRoundsInput(String(agentMaxToolRounds))
-              commitSettings({ ...draft, agentMaxToolRounds, agentWebSearch: !draft.agentWebSearch })
-            }}
-            className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${draft.agentWebSearch ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-            role="switch"
-            aria-checked={draft.agentWebSearch}
-            aria-label="网络搜索"
-          >
-            <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${draft.agentWebSearch ? 'translate-x-[14px]' : 'translate-x-[2px]'}`} />
-          </button>
-        </div>
-        <div data-selectable-text className="text-xs text-gray-500 dark:text-gray-500">
-          启用 Responses API 的 <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px] dark:bg-white/[0.06]">web_search</code> 工具。模型每次调用此工具会产生少量固定价格的额外计费。
-        </div>
+        <SettingToggleRow
+          label="网络搜索"
+          description={<>
+            启用 Responses API 的 <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px] dark:bg-white/[0.06]">web_search</code> 工具。模型每次调用此工具会产生少量固定价格的额外计费。
+          </>}
+          checked={settings.agentWebSearch}
+          onToggle={() => {
+            const agentMaxToolRounds = agentMaxToolRoundsInput.trim() === ''
+              ? DEFAULT_AGENT_MAX_TOOL_ROUNDS
+              : normalizeAgentMaxToolRounds(agentMaxToolRoundsInput, settings.agentMaxToolRounds)
+            setAgentMaxToolRoundsInput(String(agentMaxToolRounds))
+            commitSettings({ ...settings, agentMaxToolRounds, agentWebSearch: !settings.agentWebSearch })
+          }}
+        />
+
+        <SettingToggleRow
+          label="发送消息后自动滚动到底部"
+          description="开启后，在对话模式发送消息成功后会自动滚动到对话底部。"
+          checked={settings.agentScrollToBottomAfterSubmit}
+          onToggle={() => commitSettings({ ...settings, agentScrollToBottomAfterSubmit: !settings.agentScrollToBottomAfterSubmit })}
+        />
+
+        <SettingToggleRow
+          label="公式输出提示"
+          description={<>
+            开启后，Agent 会被要求使用 <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.9em] text-gray-700 dark:bg-white/10 dark:text-gray-200">$...$</code> 和 <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.9em] text-gray-700 dark:bg-white/10 dark:text-gray-200">$$...$$</code> 输出数学公式，确保渲染效果正常。
+          </>}
+          checked={settings.agentMathFormattingPrompt}
+          onToggle={() => commitSettings({ ...settings, agentMathFormattingPrompt: !settings.agentMathFormattingPrompt })}
+        />
       </div>
     </div>
   )

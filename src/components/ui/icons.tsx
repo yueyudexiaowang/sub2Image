@@ -331,3 +331,22 @@ export function TransparentBgIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+export function CanvasNodesIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <rect x={3} y={3} width={8} height={6} rx={1.5} strokeWidth={2} />
+      <rect x={13} y={15} width={8} height={6} rx={1.5} strokeWidth={2} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 6h4a2 2 0 012 2v4m-4 6H9a2 2 0 01-2-2v-3" />
+    </svg>
+  )
+}
+
+export function KeyboardIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+      <rect x={2} y={6} width={20} height={12} rx={2} strokeWidth={2} />
+      <path strokeLinecap="round" strokeWidth={2} d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6" />
+    </svg>
+  )
+}

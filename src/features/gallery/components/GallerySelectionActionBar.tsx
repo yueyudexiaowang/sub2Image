@@ -13,6 +13,7 @@ import { downloadImageEntriesAsZip, downloadImageIds, formatExportFileTime, getT
 import { getSub2Token, OPEN_SUB2_CONNECT_EVENT } from '../../../lib/sub2api'
 import { getCollectionTasks } from '../../../components/favorites/favoriteUtils'
 import InputBatchBars from '../../../components/input/inputBatchBars'
+import { openCanvasPicker } from '../../canvas'
 import { saveTasksWithCloudState, useCloudRuntimeState } from '../../cloud'
 
 export default function GallerySelectionActionBar() {
@@ -202,7 +203,7 @@ export default function GallerySelectionActionBar() {
       }
 
       if (successCount === 0) {
-        showToast('选中的收藏夹没有图片', 'info')
+        showToast('选中的素材集没有图片', 'info')
       } else if (failCount > 0) {
         showToast(`部分下载失败：成功 ${successCount}，失败 ${failCount}`, 'error')
       } else {
@@ -219,11 +220,11 @@ export default function GallerySelectionActionBar() {
     const selectedIds = new Set(selectedFavoriteCollectionIds)
     const selectedCollections = favoriteCollections.filter((collection) => selectedIds.has(collection.id))
     if (selectedCollections.length === 0) {
-      showToast('没有可删除的收藏夹', 'info')
+      showToast('没有可删除的素材集', 'info')
       return
     }
     if (favoriteCollections.length - selectedCollections.length < 1) {
-      showToast('至少保留一个收藏夹', 'error')
+      showToast('至少保留一个素材集', 'error')
       return
     }
 
@@ -234,11 +235,11 @@ export default function GallerySelectionActionBar() {
         .flatMap((task) => task.outputImages || []),
     ).size
     setConfirmDialog({
-      title: '批量删除收藏夹',
-      message: `确定要删除选中的 ${selectedCollections.length} 个收藏夹吗？`,
+      title: '批量删除素材集',
+      message: `确定要删除选中的 ${selectedCollections.length} 个素材集吗？`,
       checkbox: imageCount > 0
         ? {
-            label: `同时删除收藏夹中的图片（${imageCount} 张）`,
+            label: `同时删除素材集中的图片（${imageCount} 张）`,
             tone: 'danger',
           }
         : undefined,
@@ -269,6 +270,16 @@ export default function GallerySelectionActionBar() {
       onSelectAllVisibleTasks={handleSelectAllVisibleTasks}
       onInvertVisibleTasks={handleInvertVisibleTasks}
       onToggleFavorite={() => openFavoritePicker(selectedTaskIds)}
+      onAddToCanvas={() => {
+        const imageIds = selectedTaskIds
+          .flatMap((id) => tasks.find((t) => t.id === id)?.outputImages || [])
+          .filter(Boolean)
+        if (!imageIds.length) {
+          showToast('选中的任务没有可加入的图片', 'info')
+          return
+        }
+        openCanvasPicker(imageIds)
+      }}
       onSaveToCloud={handleSaveToCloud}
       cloudSaveProgress={cloudSaveProgress}
       onDownloadSelected={handleDownloadSelected}
