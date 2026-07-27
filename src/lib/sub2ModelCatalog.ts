@@ -1,6 +1,15 @@
-import { listSub2Keys, listSub2Models, SUB2_AUTH_CHANGED_EVENT, type Sub2Key, type Sub2Model } from './sub2api'
+import {
+  listSub2GroupModels,
+  listSub2Groups,
+  listSub2Keys,
+  listSub2Models,
+  SUB2_AUTH_CHANGED_EVENT,
+  type Sub2Group,
+  type Sub2Key,
+  type Sub2Model,
+} from './sub2api'
 
-/** 一个分组及其可用模型（分组信息从 Key 上聚合，每组取一个可用 Key 发起请求）。 */
+/** 一个分组及其可用模型（分组信息优先取账号完整列表，每组取一个可用 Key 发起请求）。 */
 export interface Sub2GroupModels {
   groupId: number
   groupName: string
@@ -62,26 +71,36 @@ if (typeof window !== 'undefined') {
   window.addEventListener(SUB2_AUTH_CHANGED_EVENT, clearSub2ModelCatalogCache)
 }
 
-export async function fetchSub2Models(apiKey: string, force = false): Promise<Sub2Model[]> {
+export async function fetchSub2Models(apiKey: string, force = false, groupId?: number): Promise<Sub2Model[]> {
   if (!force) {
     const cached = modelCache.get(apiKey)
     if (cached) return cached
   }
-  const models = await listSub2Models(apiKey)
+  const models = groupId == null
+    ? await listSub2Models(apiKey)
+    : await listSub2GroupModels(groupId, apiKey, force)
   modelCache.set(apiKey, models)
   return models
 }
 
 export async function fetchActiveSub2Keys(force = false): Promise<Sub2Key[]> {
   if (!force && keysCache) return keysCache
-  const keys = filterActiveSub2Keys(await listSub2Keys())
+  const keys = filterActiveSub2Keys(await listSub2Keys(force))
   keysCache = keys
   return keys
 }
 
 /** 把 active keys 按分组聚合（不含模型）。 */
-export function groupSub2Keys(activeKeys: Sub2Key[]): Array<Omit<Sub2GroupModels, 'models' | 'error'>> {
+export function groupSub2Keys(activeKeys: Sub2Key[], availableGroups: Sub2Group[] = []): Array<Omit<Sub2GroupModels, 'models' | 'error'>> {
   const groups = new Map<number, Omit<Sub2GroupModels, 'models' | 'error'>>()
+  availableGroups.forEach((group) => {
+    groups.set(group.id, {
+      groupId: group.id,
+      groupName: group.name,
+      platform: group.platform || '',
+      keys: [],
+    })
+  })
   activeKeys.forEach((item) => {
     const groupId = Number(item.group_id)
     const existing = groups.get(groupId)
@@ -101,11 +120,16 @@ export function groupSub2Keys(activeKeys: Sub2Key[]): Array<Omit<Sub2GroupModels
 
 /** 并发拉取所有分组的模型列表；单个分组失败不影响其它分组（记录在 error 上）。 */
 export async function loadSub2GroupModels(activeKeys: Sub2Key[], force = false): Promise<Sub2GroupModels[]> {
-  const groups = groupSub2Keys(activeKeys)
+  // 完整分组接口不可用时仍可用 Key 自带信息展示模型，避免设置入口整体失效
+  const availableGroups = await listSub2Groups(force).catch((err) => {
+    console.warn('[Sub2API] 获取完整分组失败，回退到 Key 分组', err)
+    return []
+  })
+  const groups = groupSub2Keys(activeKeys, availableGroups)
   return Promise.all(groups.map(async (group) => {
     const key = pickGroupKey(group.keys)
     try {
-      const models = key ? await fetchSub2Models(key.key, force) : []
+      const models = key ? await fetchSub2Models(key.key, force, group.groupId) : []
       return { ...group, models }
     } catch (err) {
       console.warn('[Sub2API] 获取分组模型失败', { groupId: group.groupId, err })

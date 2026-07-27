@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getSub2PublicSettings,
+  listSub2Groups,
+  listSub2GroupModels,
   listSub2Keys,
   listSub2Models,
   loginSub2,
@@ -104,6 +106,37 @@ describe('Sub2API 登录', () => {
 })
 
 describe('Sub2API 模型', () => {
+  it('直接读取账号可用分组列表', async () => {
+    values.set('image2.sub2api.token', 'account-token')
+    const fetcher = vi.fn().mockResolvedValue(ok([
+      { id: 2, name: '文本', platform: 'openai' },
+      { id: 3, name: '图像', platform: 'gemini' },
+    ]))
+    vi.stubGlobal('fetch', fetcher)
+
+    await expect(listSub2Groups()).resolves.toEqual([
+      { id: 2, name: '文本', platform: 'openai' },
+      { id: 3, name: '图像', platform: 'gemini' },
+    ])
+    await expect(listSub2Groups()).resolves.toHaveLength(2)
+    expect(fetcher).toHaveBeenCalledWith('/sub2api-auth/groups/available', expect.objectContaining({ cache: 'no-store' }))
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer account-token')
+  })
+
+  it('同一分组只读取一次模型列表', async () => {
+    values.set('image2.sub2api.token', 'models-account-token')
+    const fetcher = vi.fn().mockResolvedValue(ok({
+      object: 'list',
+      data: [{ id: 'gpt-5.4' }],
+    }))
+    vi.stubGlobal('fetch', fetcher)
+
+    await expect(listSub2GroupModels(2, 'sk-user-1')).resolves.toEqual([{ id: 'gpt-5.4' }])
+    await expect(listSub2GroupModels(2, 'sk-user-2')).resolves.toEqual([{ id: 'gpt-5.4' }])
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
   it('使用当前账号分页读取完整 Key 列表并穿透线上缓存', async () => {
     values.set('image2.sub2api.token', 'account-token')
     const fetcher = vi.fn()
@@ -124,6 +157,8 @@ describe('Sub2API 模型', () => {
     vi.stubGlobal('fetch', fetcher)
 
     await expect(listSub2Keys()).resolves.toHaveLength(2)
+    await expect(listSub2Keys()).resolves.toHaveLength(2)
+    expect(fetcher).toHaveBeenCalledTimes(2)
     expect(fetcher.mock.calls[0][0]).toMatch(/^\/sub2api-auth\/keys\?page=1&page_size=20&sort_by=created_at&sort_order=desc&timezone=Asia%2FShanghai&t=\d+$/)
     expect(fetcher.mock.calls[1][0]).toMatch(/^\/sub2api-auth\/keys\?page=2&page_size=20&sort_by=created_at&sort_order=desc&timezone=Asia%2FShanghai&t=\d+$/)
     expect(fetcher.mock.calls[0][1].headers.get('Authorization')).toBe('Bearer account-token')

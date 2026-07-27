@@ -10,6 +10,13 @@ const mocks = vi.hoisted(() => ({
     { id: 1, key: 'key-a', name: 'Key A', status: 'active', group_id: 10, group: { id: 10, name: 'usSub', platform: 'openai' } },
     { id: 2, key: 'key-b', name: 'Key B', status: 'active', group_id: 20, group: { id: 20, name: 'cnSub', platform: 'grok' } },
   ]),
+  listSub2Groups: vi.fn(async () => [
+    { id: 10, name: 'usSub', platform: 'openai' },
+    { id: 20, name: 'cnSub', platform: 'grok' },
+  ]),
+  listSub2GroupModels: vi.fn(async (_groupId: number, key: string) => (key === 'key-a'
+    ? [{ id: 'gpt-image-2' }, { id: 'gpt-5.6-sol' }]
+    : [{ id: 'grok-4.5' }])),
   listSub2Models: vi.fn(async (key: string) => (key === 'key-a'
     ? [{ id: 'gpt-image-2' }, { id: 'gpt-5.6-sol' }]
     : [{ id: 'grok-4.5' }])),
@@ -19,6 +26,8 @@ vi.mock('../../src/lib/sub2api', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../src/lib/sub2api')>(),
   getSub2Token: mocks.getSub2Token,
   listSub2Keys: mocks.listSub2Keys,
+  listSub2Groups: mocks.listSub2Groups,
+  listSub2GroupModels: mocks.listSub2GroupModels,
   listSub2Models: mocks.listSub2Models,
 }))
 
@@ -57,6 +66,8 @@ beforeEach(() => {
   })
   mocks.getSub2Token.mockReturnValue('token')
   mocks.listSub2Keys.mockClear()
+  mocks.listSub2Groups.mockClear()
+  mocks.listSub2GroupModels.mockClear()
   mocks.listSub2Models.mockClear()
 })
 
