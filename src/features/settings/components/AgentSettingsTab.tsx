@@ -8,9 +8,11 @@ import { useStore } from '../../../store'
 import { normalizeAgentMaxToolRounds } from '../../../lib/apiProfiles'
 import {
   getSub2Token,
+  listSub2Groups,
+  listSub2GroupModels,
   listSub2Keys,
-  listSub2Models,
   OPEN_SUB2_CONNECT_EVENT,
+  type Sub2Group,
   type Sub2Key,
 } from '../../../lib/sub2api'
 import { syncSub2Settings } from '../../../lib/sub2Profiles'
@@ -39,6 +41,7 @@ export default function AgentSettingsTab({
   const videoConfig = draft.sub2Configs.find((config) => config.profileId === draft.agentVideoProfileId)
     ?? draft.sub2Configs.find((config) => config.kind === 'video')
   const [keys, setKeys] = useState<Sub2Key[]>([])
+  const [groups, setGroups] = useState<Sub2Group[]>([])
   const [textGroupId, setTextGroupId] = useState(textConfig?.groupId ?? 0)
   const [imageGroupId, setImageGroupId] = useState(imageConfig?.groupId ?? 0)
   const [videoKeyId, setVideoKeyId] = useState(videoConfig?.keyId ?? 0)
@@ -53,30 +56,31 @@ export default function AgentSettingsTab({
 
   const activeKeys = useMemo(() => keys.filter((item) => item.status === 'active' && item.group_id != null), [keys])
   const keyMap = useMemo(() => new Map(activeKeys.map((item) => [item.id, item.key])), [activeKeys])
+  const groupMap = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups])
   const groupOptions = useMemo(() => {
-    const groups = new Map<number, { label: string; value: number }>()
-    activeKeys.forEach((item) => {
-      const id = Number(item.group_id)
-      if (groups.has(id)) return
-      const name = item.group?.name || `分组 ${id}`
-      groups.set(id, {
-        label: item.group?.platform ? `${name} · ${item.group.platform}` : name,
-        value: id,
-      })
-    })
-    return [...groups.values()]
-  }, [activeKeys])
+    return groups
+      .map((group) => ({
+        label: group.platform ? `${group.name} · ${group.platform}` : group.name,
+        value: group.id,
+      }))
+  }, [activeKeys, groups])
 
   const loadModels = async (kind: Sub2Config['kind'], groupId: number, items = activeKeys, selectedKeyId?: number) => {
     const savedKeyId = selectedKeyId ?? (kind === 'text' ? textConfig?.keyId : kind === 'image' ? imageConfig?.keyId : videoConfig?.keyId)
     const key = items.find((item) => item.id === savedKeyId && Number(item.group_id) === groupId)
       ?? items.find((item) => Number(item.group_id) === groupId)
-    if (!key) return
+    if (!key) {
+      if (kind === 'text') setTextModels([])
+      else if (kind === 'image') setImageModels([])
+      else setVideoModels([])
+      setError('所选分组暂无可用的 Sub2API Key')
+      return
+    }
 
     setLoading(kind)
     setError('')
     try {
-      const models = (await listSub2Models(key.key)).map((item) => item.id)
+      const models = (await listSub2GroupModels(groupId, key.key)).map((item) => item.id)
       if (kind === 'text') {
         setTextModels(models)
         if (!models.includes(textModel)) setTextModel('')
@@ -100,7 +104,11 @@ export default function AgentSettingsTab({
     setLoading('keys')
     setError('')
     try {
-      const items = (await listSub2Keys()).filter((item) => item.status === 'active' && item.group_id != null)
+      const [availableGroups, allItems] = await Promise.all([
+        listSub2Groups(),
+        listSub2Keys(),
+      ])
+      const items = allItems.filter((item) => item.status === 'active' && item.group_id != null)
       const textProfile = draft.profiles.find((profile) => profile.id === textConfig?.profileId)
       const imageProfile = draft.profiles.find((profile) => profile.id === imageConfig?.profileId)
       const videoProfile = draft.profiles.find((profile) => profile.id === videoConfig?.profileId)
@@ -112,6 +120,7 @@ export default function AgentSettingsTab({
         || (imageConfig && imageKey?.key !== imageProfile?.apiKey)
         || (videoConfig && videoKey?.key !== videoProfile?.apiKey),
       )
+      setGroups(availableGroups)
       setKeys(items)
       if (accountChanged) {
         setTextGroupId(0)
@@ -128,8 +137,10 @@ export default function AgentSettingsTab({
         return
       }
 
-      const nextTextGroupId = items.some((item) => Number(item.group_id) === textGroupId) ? textGroupId : 0
-      const nextImageGroupId = items.some((item) => Number(item.group_id) === imageGroupId) ? imageGroupId : 0
+      const hasGroup = (groupId: number) => availableGroups.some((group) => group.id === groupId)
+        && items.some((item) => Number(item.group_id) === groupId)
+      const nextTextGroupId = hasGroup(textGroupId) ? textGroupId : 0
+      const nextImageGroupId = hasGroup(imageGroupId) ? imageGroupId : 0
       const nextVideoKeyId = items.some((item) => item.id === videoKeyId) ? videoKeyId : 0
       setTextGroupId(nextTextGroupId)
       setImageGroupId(nextImageGroupId)
@@ -162,6 +173,10 @@ export default function AgentSettingsTab({
     if (!textKey || !imageKey || !textModel || !imageModel) return
     if ((videoKeyId || videoModel) && (!videoKey || !videoModel)) return
 
+    const textGroup = groupMap.get(textGroupId)
+    const imageGroup = groupMap.get(imageGroupId)
+    const videoGroup = videoKey?.group_id == null ? undefined : groupMap.get(Number(videoKey.group_id))
+
     const textId = textConfig?.id ?? `agent-text-${Date.now().toString(36)}`
     const imageId = imageConfig?.id ?? `agent-image-${Date.now().toString(36)}`
     const videoId = videoConfig?.id ?? `agent-video-${Date.now().toString(36)}`
@@ -172,8 +187,8 @@ export default function AgentSettingsTab({
       keyId: textKey.id,
       keyName: textKey.name,
       groupId: Number(textKey.group_id),
-      groupName: textKey.group?.name || '',
-      platform: textKey.group?.platform || '',
+      groupName: textGroup?.name || textKey.group?.name || '',
+      platform: textGroup?.platform || textKey.group?.platform || '',
       model: textModel,
       profileId: textConfig?.profileId ?? `sub2api-text-${textId}`,
     }
@@ -184,8 +199,8 @@ export default function AgentSettingsTab({
       keyId: imageKey.id,
       keyName: imageKey.name,
       groupId: Number(imageKey.group_id),
-      groupName: imageKey.group?.name || '',
-      platform: imageKey.group?.platform || '',
+      groupName: imageGroup?.name || imageKey.group?.name || '',
+      platform: imageGroup?.platform || imageKey.group?.platform || '',
       model: imageModel,
       profileId: imageConfig?.profileId ?? `sub2api-image-${imageId}`,
     }
@@ -196,8 +211,8 @@ export default function AgentSettingsTab({
       keyId: videoKey.id,
       keyName: videoKey.name,
       groupId: Number(videoKey.group_id),
-      groupName: videoKey.group?.name || '',
-      platform: videoKey.group?.platform || '',
+      groupName: videoGroup?.name || videoKey.group?.name || '',
+      platform: videoGroup?.platform || videoKey.group?.platform || '',
       model: videoModel,
       profileId: videoConfig?.profileId ?? `sub2api-video-${videoId}`,
     } : null

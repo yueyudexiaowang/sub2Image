@@ -1,40 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../../../store'
 import {
   getSub2Token,
   getSub2User,
-  listSub2Keys,
+  listSub2Groups,
   logoutSub2,
   OPEN_SUB2_CONNECT_EVENT,
-  type Sub2Key,
+  type Sub2Group,
   type Sub2User,
 } from '../../../lib/sub2api'
 
 export default function Sub2ApiSettingsTab() {
   const [user, setUser] = useState<Sub2User | null>(() => getSub2User())
-  const [keys, setKeys] = useState<Sub2Key[]>([])
+  const [groups, setGroups] = useState<Sub2Group[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const groups = useMemo(() => {
-    const map = new Map<number, { id: number; name: string; platform: string }>()
-    keys.filter((item) => item.status === 'active' && item.group_id != null).forEach((item) => {
-      const id = Number(item.group_id)
-      const group = map.get(id) || {
-        id,
-        name: item.group?.name || `分组 ${id}`,
-        platform: item.group?.platform || '',
-      }
-      map.set(id, group)
-    })
-    return [...map.values()]
-  }, [keys])
-
-  const loadKeys = async () => {
+  const loadGroups = async () => {
     setLoading(true)
     setError('')
     try {
-      setKeys(await listSub2Keys())
+      setGroups(await listSub2Groups())
     } catch (err) {
       console.error('[Sub2API] 获取用户分组失败', err)
       setError(err instanceof Error ? err.message : String(err))
@@ -44,7 +30,7 @@ export default function Sub2ApiSettingsTab() {
   }
 
   useEffect(() => {
-    if (getSub2Token()) void loadKeys()
+    if (getSub2Token()) void loadGroups()
   }, [])
 
   if (!user) {
@@ -76,13 +62,13 @@ export default function Sub2ApiSettingsTab() {
           <div className="truncate text-xs text-gray-500">{user.display_name || user.username || user.email || `用户 ${user.id || ''}`}</div>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" disabled={loading} onClick={() => void loadKeys()} className="rounded-lg px-3 py-1.5 text-xs text-blue-500 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-500/10">刷新分组</button>
+          <button type="button" disabled={loading} onClick={() => void loadGroups()} className="rounded-lg px-3 py-1.5 text-xs text-blue-500 hover:bg-blue-50 disabled:opacity-50 dark:hover:bg-blue-500/10">刷新分组</button>
           <button
             type="button"
             onClick={() => {
               logoutSub2()
               setUser(null)
-              setKeys([])
+              setGroups([])
               setError('')
             }}
             className="rounded-lg px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.06]"

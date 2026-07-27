@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import {
   getSub2PublicSettings,
-  listSub2Keys,
+  listSub2Groups,
   loginSub2,
   loginSub2TwoFactor,
   type Sub2PublicSettings,
@@ -90,10 +90,9 @@ export default function JwsConnectModal({ onClose }: JwsConnectModalProps) {
   }, [publicSettings])
 
   const finishLogin = async () => {
-    const items = (await listSub2Keys()).filter((item) => item.status === 'active')
-    const groups = new Set(items.flatMap((item) => item.group_id == null ? [] : [item.group_id]))
+    const groups = await listSub2Groups()
     setPassword('')
-    showToast(`已登录 Sub2API，读取到 ${groups.size} 个分组`, 'success')
+    showToast(`已登录 Sub2API，读取到 ${groups.length} 个分组`, 'success')
     onClose()
     setShowSettings(true, 'agent')
   }

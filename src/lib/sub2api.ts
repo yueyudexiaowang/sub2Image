@@ -29,6 +29,12 @@ export interface Sub2Key {
   }
 }
 
+export interface Sub2Group {
+  id: number
+  name: string
+  platform?: string
+}
+
 export interface Sub2Model {
   id: string
   display_name?: string
@@ -54,6 +60,13 @@ interface AuthResult {
   user_email_masked?: string
 }
 
+let cacheToken = ''
+let keysCache: Sub2Key[] | null = null
+let keysPromise: Promise<Sub2Key[]> | null = null
+let groupsCache: Sub2Group[] | null = null
+let groupsPromise: Promise<Sub2Group[]> | null = null
+const groupModelsCache = new Map<number, Promise<Sub2Model[]>>()
+
 export type Sub2LoginResult =
   | { requires2fa: true; tempToken: string; maskedEmail: string }
   | { requires2fa: false; user: Sub2User }
@@ -65,8 +78,22 @@ function saveAuth(data: AuthResult) {
   if (data.expires_in) localStorage.setItem(expiresKey, String(Date.now() + data.expires_in * 1000))
 }
 
+function prepareSub2Cache() {
+  const token = getSub2Token()
+  if (token !== cacheToken) {
+    cacheToken = token
+    keysCache = null
+    keysPromise = null
+    groupsCache = null
+    groupsPromise = null
+    groupModelsCache.clear()
+  }
+  return token
+}
+
 function saveUser(data: AuthResult, email: string) {
   saveAuth(data)
+  prepareSub2Cache()
   const user = data.user || { email }
   localStorage.setItem(userKey, JSON.stringify(user))
   window.dispatchEvent(new Event(SUB2_AUTH_CHANGED_EVENT))
@@ -174,31 +201,76 @@ export function logoutSub2() {
   localStorage.removeItem(refreshKey)
   localStorage.removeItem(expiresKey)
   localStorage.removeItem(userKey)
+  prepareSub2Cache()
   window.dispatchEvent(new Event(SUB2_AUTH_CHANGED_EVENT))
 }
 
 export async function listSub2Keys() {
-  const items: Sub2Key[] = []
-  let page = 1
-  let pages = 1
+  const token = prepareSub2Cache()
+  if (keysCache) return keysCache
+  if (keysPromise) return keysPromise
 
-  while (page <= pages) {
-    const query = new URLSearchParams({
-      page: String(page),
-      page_size: '20',
-      sort_by: 'created_at',
-      sort_order: 'desc',
-      timezone: 'Asia/Shanghai',
-      t: String(Date.now()),
-    })
-    const data = await authFetch(`keys?${query}`, { cache: 'no-store' })
-    const pageItems = Array.isArray(data) ? data : data?.items
-    if (Array.isArray(pageItems)) items.push(...pageItems)
-    pages = Array.isArray(data) ? 1 : Number(data?.pages) || 1
-    page += 1
+  keysPromise = (async () => {
+    const items: Sub2Key[] = []
+    let page = 1
+    let pages = 1
+
+    while (page <= pages) {
+      const query = new URLSearchParams({
+        page: String(page),
+        page_size: '20',
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        timezone: 'Asia/Shanghai',
+        t: String(Date.now()),
+      })
+      const data = await authFetch(`keys?${query}`, { cache: 'no-store' })
+      const pageItems = Array.isArray(data) ? data : data?.items
+      if (Array.isArray(pageItems)) items.push(...pageItems)
+      pages = Array.isArray(data) ? 1 : Number(data?.pages) || 1
+      page += 1
+    }
+
+    return items
+  })()
+  try {
+    keysCache = await keysPromise
+    return keysCache
+  } finally {
+    keysPromise = null
+    if (!token) keysCache = null
   }
+}
 
-  return items
+export async function listSub2Groups() {
+  const token = prepareSub2Cache()
+  if (groupsCache) return groupsCache
+  if (groupsPromise) return groupsPromise
+
+  groupsPromise = authFetch('groups/available', { cache: 'no-store' })
+    .then((data) => (Array.isArray(data) ? data : []) as Sub2Group[])
+  try {
+    groupsCache = await groupsPromise
+    return groupsCache
+  } finally {
+    groupsPromise = null
+    if (!token) groupsCache = null
+  }
+}
+
+export async function listSub2GroupModels(groupId: number, key: string) {
+  prepareSub2Cache()
+  const cached = groupModelsCache.get(groupId)
+  if (cached) return cached
+
+  const request = listSub2Models(key)
+  groupModelsCache.set(groupId, request)
+  try {
+    return await request
+  } catch (err) {
+    groupModelsCache.delete(groupId)
+    throw err
+  }
 }
 
 export async function listSub2Models(key: string) {
