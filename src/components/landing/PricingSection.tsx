@@ -159,7 +159,7 @@ export default function PricingSection({
         ) : (
           <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[1fr_20rem] lg:grid-cols-[1fr_22rem]">
             {/* 左：参数配置 */}
-            <div className="flex min-h-0 flex-col gap-5 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
+            <div className="landing-scroll flex min-h-0 flex-col gap-5 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
               <div className="flex flex-col gap-2">
                 <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">模型</span>
                 <div className="flex flex-wrap gap-2">
@@ -207,31 +207,48 @@ export default function PricingSection({
               {/* 数量 */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">数量</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    aria-label="减少数量"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-lg text-zinc-300 transition-colors hover:border-white/40 hover:text-white"
-                  >
-                    −
-                  </button>
-                  <span className="w-12 text-center font-mono text-xl text-white">{quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.min(50, q + 1))}
-                    aria-label="增加数量"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-lg text-zinc-300 transition-colors hover:border-white/40 hover:text-white"
-                  >
-                    +
-                  </button>
-                  <div className="ml-2 flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* 一体化步进器 */}
+                  <div className="inline-flex h-10 items-center overflow-hidden rounded-lg border border-white/12 bg-white/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="减少数量"
+                      className="flex h-full w-10 items-center justify-center text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                        <path d="M3.5 8h9" />
+                      </svg>
+                    </button>
+                    <span className="flex h-full w-12 items-center justify-center border-x border-white/10 font-mono text-base tabular-nums text-white">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.min(50, q + 1))}
+                      disabled={quantity >= 50}
+                      aria-label="增加数量"
+                      className="flex h-full w-10 items-center justify-center text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                        <path d="M8 3.5v9M3.5 8h9" />
+                      </svg>
+                    </button>
+                  </div>
+                  {/* 快捷档位 */}
+                  <div className="inline-flex h-10 items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-1">
                     {[1, 4, 10].map((n) => (
                       <button
                         key={n}
                         type="button"
                         onClick={() => setQuantity(n)}
-                        className="rounded-md bg-white/8 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-white/20 hover:text-white"
+                        aria-pressed={quantity === n}
+                        className={`h-full rounded-md px-3 text-xs tabular-nums transition-all duration-200 ${
+                          quantity === n
+                            ? 'bg-sky-400/20 text-white shadow-[inset_0_0_0_1px_rgba(56,189,248,.5)]'
+                            : 'text-zinc-400 hover:bg-white/8 hover:text-white'
+                        }`}
                       >
                         {n} 条
                       </button>
@@ -250,7 +267,7 @@ export default function PricingSection({
             {/* 右：SKU 价格卡 */}
             <aside
               style={{ '--accent': model.accent } as React.CSSProperties}
-              className="relative flex min-h-0 flex-col overflow-y-auto rounded-2xl border border-white/12 bg-black/50 p-5 backdrop-blur-md md:p-6"
+              className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/12 bg-black/50 p-5 backdrop-blur-md md:p-6"
             >
               <span
                 aria-hidden="true"
@@ -306,9 +323,25 @@ export default function PricingSection({
                 <button
                   type="button"
                   onClick={onEnter}
-                  className="mt-5 w-full rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-transform hover:scale-[1.02] active:scale-95"
+                  className="group/cta relative mt-5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-[color:var(--accent)]/60 bg-[color:var(--accent)]/12 px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:border-[color:var(--accent)] hover:bg-[color:var(--accent)]/22 hover:shadow-[0_0_28px_-6px_var(--accent)] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  用该配置开始创作
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover/cta:translate-x-full"
+                  />
+                  <span className="relative">用该配置开始创作</span>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 16"
+                    className="relative h-4 w-4 transition-transform duration-300 group-hover/cta:translate-x-1"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" />
+                  </svg>
                 </button>
                 <p className="mt-2.5 text-center text-[11px] leading-relaxed text-zinc-600">
                   价格按 3 位小数处理，实际以下单时生成的报价单为准。

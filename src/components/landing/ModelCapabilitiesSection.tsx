@@ -34,45 +34,51 @@ function ModelCard({ model, onPick }: { model: ModelSummary; onPick: () => void 
       type="button"
       onClick={onPick}
       style={{ '--accent': model.accent } as React.CSSProperties}
-      className="group relative flex h-44 w-72 shrink-0 flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left backdrop-blur-sm transition-all duration-500 hover:-translate-y-1.5 hover:border-[color:var(--accent)] hover:bg-white/[0.07] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      className="group relative flex h-44 w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f18]/80 p-5 text-left backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-300 hover:border-[color:var(--accent)] hover:bg-[#0d1420]/90 hover:shadow-[0_0_0_1px_var(--accent),0_18px_40px_-12px_var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
     >
       {/* 霓虹光晕 */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-25 blur-3xl transition-opacity duration-500 group-hover:opacity-70"
+        className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-25 blur-3xl transition-opacity duration-500 group-hover:opacity-60"
         style={{ background: 'var(--accent)' }}
       />
-      {/* 扫光 */}
+      {/* 底部渐隐强调线 */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-[900ms] ease-out group-hover:translate-x-full"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 opacity-0 transition-all duration-500 group-hover:scale-x-100 group-hover:opacity-100"
+        style={{ background: 'linear-gradient(90deg,transparent,var(--accent),transparent)' }}
       />
 
-      <div className="relative">
-        <div className="flex items-center gap-2">
-          <span
-            className="h-2 w-2 shrink-0 rounded-full transition-shadow duration-500 group-hover:shadow-[0_0_12px_3px_var(--accent)]"
-            style={{ background: model.accent }}
-          />
-          <span className="truncate text-[11px] uppercase tracking-[0.2em] text-zinc-500">{model.vendor}</span>
-        </div>
-        <p className="mt-2 truncate text-lg font-medium text-white">{model.name}</p>
-        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-400">{model.tagline}</p>
+      {/* 头部：厂商 */}
+      <div className="relative flex items-center gap-2">
+        <span
+          className="h-2 w-2 shrink-0 rounded-full transition-shadow duration-500 group-hover:shadow-[0_0_12px_3px_var(--accent)]"
+          style={{ background: model.accent }}
+        />
+        <span className="truncate text-[11px] uppercase tracking-[0.2em] text-zinc-500">{model.vendor}</span>
       </div>
 
-      <div className="relative flex items-end justify-between gap-3">
-        <div className="flex flex-wrap gap-1">
+      {/* 主体：名称 + 描述 */}
+      <p className="relative mt-2 truncate text-lg font-medium text-white">{model.name}</p>
+      <p className="relative mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-400">{model.tagline}</p>
+
+      {/* 底部：标签 + 价格，固定单行不换行 */}
+      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-white/8 pt-3">
+        <div className="flex min-w-0 items-center gap-1">
           {model.modes.slice(0, 2).map((mode) => (
-            <span key={mode} className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-zinc-300">
+            <span
+              key={mode}
+              className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-300"
+            >
               {MODE_LABEL[mode]}
             </span>
           ))}
-          <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-zinc-300">
+          <span className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-300">
             {model.resolutions[model.resolutions.length - 1]}
           </span>
         </div>
         {low && (
-          <span className="shrink-0 font-mono text-sm" style={{ color: model.accent }}>
+          <span className="shrink-0 whitespace-nowrap font-mono text-sm" style={{ color: model.accent }}>
             ${low.price.toFixed(3)}
             <span className="text-[10px] text-zinc-500">{unitText}</span>
           </span>
@@ -96,7 +102,7 @@ function MarqueeRow({
 }) {
   if (!models.length) return null
   return (
-    <div className="group/row relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+    <div className="group/row relative overflow-x-clip py-3 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
       <div
         className="flex w-max gap-4 motion-safe:animate-[landing-marquee_linear_infinite] motion-safe:group-hover/row:[animation-play-state:paused]"
         style={{ animationDuration: `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' }}
@@ -141,10 +147,10 @@ export default function ModelCapabilitiesSection({
       m.resolutions.forEach((r) => resolutions.add(r))
     })
     return [
-      { value: String(models.length), label: '可用模型' },
-      { value: String(modes.size), label: '生成模式' },
-      { value: String(resolutions.size), label: '输出规格' },
-      { value: '1', label: '统一接口' },
+      { value: String(models.length), suffix: '个', label: '可用模型' },
+      { value: String(modes.size), suffix: '类', label: '生成模式' },
+      { value: String(resolutions.size), suffix: '档', label: '输出规格' },
+      { value: '1', suffix: '套', label: '统一接口' },
     ]
   }, [models])
 
@@ -225,15 +231,31 @@ export default function ModelCapabilitiesSection({
           )}
         </div>
 
-        {/* 统计条 */}
-        <dl className="grid grid-cols-2 gap-3 px-6 md:grid-cols-4 md:px-12">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <dt className="text-xs text-zinc-500">{s.label}</dt>
-              <dd className="mt-0.5 font-mono text-2xl text-white">{s.value}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* 统计条：一整条分隔式指标带 */}
+        <div className="px-6 md:px-12">
+          <dl className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent backdrop-blur-sm md:grid-cols-4">
+            {stats.map((s, i) => (
+              <div
+                key={s.label}
+                className={`group/stat relative flex items-baseline gap-3 px-5 py-4 transition-colors duration-300 hover:bg-white/[0.05] ${
+                  i > 0 ? 'border-white/8 md:border-l' : ''
+                } ${i === 1 ? 'border-l border-white/8' : ''} ${i >= 2 ? 'border-t border-white/8 md:border-t-0' : ''}`}
+              >
+                <dd className="font-mono text-3xl leading-none text-white tabular-nums">
+                  {s.value}
+                  <span className="ml-0.5 align-super text-[10px] text-sky-400/70">{s.suffix}</span>
+                </dd>
+                <dt className="text-xs uppercase tracking-[0.16em] text-zinc-500 transition-colors duration-300 group-hover/stat:text-zinc-300">
+                  {s.label}
+                </dt>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-5 bottom-0 h-px scale-x-0 bg-gradient-to-r from-sky-400/70 to-transparent transition-transform duration-500 group-hover/stat:scale-x-100"
+                />
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
     </section>
   )

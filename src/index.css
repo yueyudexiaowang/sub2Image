@@ -1344,3 +1344,17 @@ html.dark ::selection {
   0%   { opacity: 0.35; transform: translateY(6px); }
   100% { opacity: 1; transform: translateY(0); }
 }
+
+/* 落地页面板：细滚动条，且不显示横向滚动条 */
+.landing-scroll {
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.landing-scroll::-webkit-scrollbar { width: 6px; height: 0; }
+.landing-scroll::-webkit-scrollbar-track { background: transparent; }
+.landing-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+.landing-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
