@@ -121,6 +121,10 @@ export default function PricingSection({
   const unitTotal = pricing ? round3(pricing.price * billedDuration) : 0
   const total = round3(unitTotal * quantity)
 
+  /** 该模式在 POST /v1/videos/generations 中需要额外携带的素材字段 */
+  const payloadField =
+    mode === 'video-to-video' ? 'video_urls' : mode === 'image-to-video' || mode === 'image-to-image' ? 'image_urls' : null
+
   const lineItems = pricing
     ? [
         { label: `计费单位`, value: UNIT_LABEL[pricing.unit] },
@@ -133,7 +137,7 @@ export default function PricingSection({
     <section
       id="pricing"
       data-snap-page
-      className="relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(110%_90%_at_80%_0%,#0d2a4d_0%,#07172c_40%,#03080f_72%,#000_100%)]"
+      className="landing-page-section relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(110%_90%_at_80%_0%,#0d2a4d_0%,#07172c_40%,#03080f_72%,#000_100%)]"
       aria-label="定价"
     >
       <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-4 px-6 pb-10 pt-24 md:px-12">
@@ -153,7 +157,8 @@ export default function PricingSection({
         ) : (
           <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[1fr_20rem] lg:grid-cols-[1fr_22rem]">
             {/* 左：参数配置 */}
-            <div className="landing-scroll flex min-h-0 flex-col gap-5 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
+            {/* 不用 backdrop-blur：近 30 万像素的毛玻璃会在每个滚动帧重采样背景，是掉帧主因 */}
+            <div className="landing-scroll flex min-h-0 flex-col gap-5 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <div className="flex flex-col gap-2">
                 <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">模型</span>
                 <div className="flex flex-wrap gap-2">
@@ -261,12 +266,16 @@ export default function PricingSection({
             {/* 右：SKU 价格卡 */}
             <aside
               style={{ '--accent': model.accent } as React.CSSProperties}
-              className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/12 bg-black/50 p-5 backdrop-blur-md md:p-6"
+              className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/12 bg-black/70 p-5 md:p-6"
             >
+              {/* 主色光晕用径向渐变代替 blur 滤镜：同样的观感，但不产生逐帧滤镜开销 */}
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full opacity-30 blur-3xl"
-                style={{ background: 'var(--accent)' }}
+                className="pointer-events-none absolute inset-0 opacity-40"
+                style={{
+                  background:
+                    'radial-gradient(220px 200px at 100% 0%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%)',
+                }}
               />
 
               <div className="relative">
@@ -293,6 +302,13 @@ export default function PricingSection({
                       <dd className="font-mono text-zinc-200">{item.value}</dd>
                     </div>
                   ))}
+                  {/* 该模式需要向 /v1/videos/generations 额外提交的素材入参 */}
+                  {payloadField && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-zinc-500">所需素材</dt>
+                      <dd className="font-mono text-zinc-200">{payloadField}</dd>
+                    </div>
+                  )}
                 </dl>
               </div>
 

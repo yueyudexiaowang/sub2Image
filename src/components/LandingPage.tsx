@@ -379,7 +379,16 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
   }
 
   return (
-    <main ref={pageRef} className="h-svh snap-y snap-proximity overflow-y-auto overscroll-y-contain bg-black text-white motion-safe:scroll-smooth">
+    <main
+      ref={pageRef}
+      /**
+       * 吸附必须写成 proximity：默认的 mandatory 会在 450vh 的创作流程轨道里
+       * 不断把视口拽回上一个吸附点，滚动因此发涩。
+       * 也不开 scroll-behavior:smooth —— 它让每次吸附都走一遍缓动，滚轮连滚时拖泥带水；
+       * 程序化跳转已各自显式传入 behavior。
+       */
+      className="h-svh overflow-y-auto overscroll-y-contain bg-black text-white [scroll-snap-type:y_proximity]"
+    >
       <h1 className="sr-only">我的贾维斯 / JWS Image</h1>
 
       {/* 顶部导航 */}
@@ -519,8 +528,12 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
         </div>
       </section>
 
-      {/* 能力区：滚动固定切换（复刻 Flow Capabilities） */}
-      <section ref={capsTrackRef} className="relative h-[450vh] snap-start" aria-label="创作流程">
+      {/*
+        能力区：滚动固定切换（复刻 Flow Capabilities）。
+        这段 450vh 由滚动进度驱动阶段切换，不能参与吸附 —— 否则浏览器会在
+        用户往下滚时不断把视口拽回轨道起点，手感发涩。
+      */}
+      <section ref={capsTrackRef} className="relative h-[450vh] snap-align-none" aria-label="创作流程">
         <div className="sticky top-0 flex h-svh flex-col overflow-hidden [background:radial-gradient(120%_100%_at_50%_115%,#1a4a8a_0%,#0c2a55_38%,#050d1c_70%,#000_100%)]">
           {/* 区块标题 */}
           <p className="pt-24 text-center text-lg text-zinc-400">创作流程</p>
@@ -592,7 +605,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                 <div
                   key={s.key}
                   aria-hidden={i !== activeStage}
-                  className={`absolute inset-x-0 bottom-0 rounded-2xl border border-white/10 bg-[#0e2c52]/90 p-5 shadow-xl backdrop-blur-sm transition-all duration-500 ease-out ${
+                  className={`absolute inset-x-0 bottom-0 rounded-2xl border border-white/10 bg-[#0e2c52]/95 p-5 shadow-xl transition-all duration-500 ease-out ${
                     i === activeStage ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
                   }`}
                 >
@@ -636,7 +649,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       {/* 创作者精选区（复刻 Flow Sessions：文字层在上，下层是 3D 媒体转轮）。布局依赖三列宽屏结构，窄屏隐藏 */}
       <section
         data-snap-page
-        className="relative hidden h-svh snap-start overflow-hidden [background:radial-gradient(120%_120%_at_30%_80%,#4a3208_0%,#2b1d06_40%,#120b02_75%,#000_100%)] lg:block"
+        className="landing-page-section relative hidden h-svh snap-start overflow-hidden [background:radial-gradient(120%_120%_at_30%_80%,#4a3208_0%,#2b1d06_40%,#120b02_75%,#000_100%)] lg:block"
         aria-label="创作者精选"
       >
         {/* ===== 底层：3D 转轮（卡片围绕圆环，切换时整环旋转） ===== */}
@@ -785,7 +798,11 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       </section>
 
       {/* 视频生成区 */}
-      <section data-snap-page className="relative h-svh snap-start overflow-hidden bg-black" aria-label="视频生成">
+      <section
+        data-snap-page
+        className="landing-page-section relative h-svh snap-start overflow-hidden bg-black"
+        aria-label="视频生成"
+      >
         <div className="mx-auto flex h-full max-w-5xl flex-col items-center justify-center gap-4 px-4 py-16 text-center">
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">现已接入</p>
           <h2 className="text-4xl font-medium tracking-tight text-white md:text-6xl">
@@ -830,7 +847,8 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
         <div className="absolute inset-0 bg-black/20" aria-hidden="true" />
 
         <div className="relative z-10 flex h-full items-end p-4 pb-16 md:items-center md:p-16">
-          <div className="max-w-xl rounded-2xl border border-white/15 bg-black/35 p-8 shadow-2xl backdrop-blur-md md:p-12">
+          {/* 提高底色不透明度替代毛玻璃：视频背景之上的大面积 backdrop-filter 会逐帧重采样 */}
+        <div className="max-w-xl rounded-2xl border border-white/15 bg-black/60 p-8 shadow-2xl md:p-12">
             <h2 className="text-4xl font-medium leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
               <span className="text-balance">把你的想象变成现实</span>
             </h2>

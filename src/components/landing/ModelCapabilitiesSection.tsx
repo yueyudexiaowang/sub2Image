@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MODE_LABEL, type ModelMode, type ModelSummary } from './modelCatalog'
 
 interface ModelCapabilitiesSectionProps {
@@ -62,27 +62,32 @@ function ModelCard({ model, onPick }: { model: ModelSummary; onPick: () => void 
       <p className="relative mt-2 truncate text-lg font-medium text-white">{model.name}</p>
       <p className="relative mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-400">{model.tagline}</p>
 
-      {/* 底部：标签 + 价格，固定单行不换行 */}
-      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-white/8 pt-3">
-        <div className="flex min-w-0 items-center gap-1">
-          {model.modes.slice(0, 2).map((mode) => (
+      {/*
+        底部两行：模式标签独占一行（最多三种模式，挤在价格同一行会溢出），
+        分辨率与价格并列在下一行。
+      */}
+      <div className="relative mt-auto flex flex-col gap-2 border-t border-white/8 pt-3">
+        <div className="flex min-w-0 items-center gap-1 overflow-hidden">
+          {model.modes.map((mode) => (
             <span
               key={mode}
-              className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-300"
+              className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-1.5 py-0.5 text-[10px] leading-none text-zinc-300"
             >
               {MODE_LABEL[mode]}
             </span>
           ))}
-          <span className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-300">
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="shrink-0 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] leading-none text-zinc-400">
             {model.resolutions[model.resolutions.length - 1]}
           </span>
+          {low && (
+            <span className="shrink-0 whitespace-nowrap font-mono text-sm" style={{ color: model.accent }}>
+              ${low.price.toFixed(3)}
+              <span className="text-[10px] text-zinc-500">{unitText}</span>
+            </span>
+          )}
         </div>
-        {low && (
-          <span className="shrink-0 whitespace-nowrap font-mono text-sm" style={{ color: model.accent }}>
-            ${low.price.toFixed(3)}
-            <span className="text-[10px] text-zinc-500">{unitText}</span>
-          </span>
-        )}
       </div>
     </button>
   )
@@ -93,11 +98,14 @@ function MarqueeRow({
   models,
   reverse,
   duration,
+  running,
   onPick,
 }: {
   models: ModelSummary[]
   reverse?: boolean
   duration: number
+  /** 本屏不可见时暂停动画，避免离屏也占用合成线程 */
+  running: boolean
   onPick: (id: string) => void
 }) {
   if (!models.length) return null
@@ -105,7 +113,11 @@ function MarqueeRow({
     <div className="group/row relative overflow-x-clip py-2 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
       <div
         className="flex w-max gap-4 motion-safe:animate-[landing-marquee_linear_infinite] motion-safe:group-hover/row:[animation-play-state:paused]"
-        style={{ animationDuration: `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' }}
+        style={{
+          animationDuration: `${duration}s`,
+          animationDirection: reverse ? 'reverse' : 'normal',
+          animationPlayState: running ? 'running' : 'paused',
+        }}
       >
         {[0, 1].map((copy) => (
           <div key={copy} className="flex gap-4" aria-hidden={copy === 1}>
@@ -126,6 +138,22 @@ export default function ModelCapabilitiesSection({
   onPickModel,
 }: ModelCapabilitiesSectionProps) {
   const [filter, setFilter] = useState<Filter>('all')
+  const sectionRef = useRef<HTMLElement>(null)
+  const [inView, setInView] = useState(false)
+
+  /**
+   * 跑马灯只在本屏可见时运行。
+   * 24 张卡片的常驻 transform 动画即使离屏也会占用合成线程，是滚动掉帧的主因之一。
+   */
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const io = new IntersectionObserver((entries) => setInView(entries[0]?.isIntersecting ?? false), {
+      rootMargin: '200px 0px',
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   const visible = useMemo(() => {
     if (filter === 'video') return models.filter(isVideoModel)
@@ -151,7 +179,7 @@ export default function ModelCapabilitiesSection({
 
     const list: { value: string; unit: string; label: string; desc: string; accent?: boolean }[] = [
       { value: String(models.length), unit: '个', label: '可用模型', desc: '视频 + 图像，持续接入' },
-      { value: String(modes.size), unit: '类', label: '生成模式', desc: '文生 / 图生自由切换' },
+      { value: String(modes.size), unit: '类', label: '生成模式', desc: '文生 / 图生 / 视频生视频' },
       { value: String(resolutions.size), unit: '档', label: '输出规格', desc: '480p 起，最高 4K' },
       ...(floor !== null
         ? [{ value: `$${floor.toFixed(3)}`, unit: '/秒', label: '最低起价', desc: '按秒计费，用多少付多少', accent: true }]
@@ -162,9 +190,10 @@ export default function ModelCapabilitiesSection({
 
   return (
     <section
+      ref={sectionRef}
       id="models"
       data-snap-page
-      className="relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(120%_100%_at_50%_-10%,#12386b_0%,#08203f_35%,#040a16_68%,#000_100%)]"
+      className="landing-page-section relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(120%_100%_at_50%_-10%,#12386b_0%,#08203f_35%,#040a16_68%,#000_100%)]"
       aria-label="模型能力"
     >
       <div className="relative z-10 flex h-full flex-col justify-center gap-5 py-16">
@@ -209,8 +238,8 @@ export default function ModelCapabilitiesSection({
             </div>
           ) : (
             <>
-              <MarqueeRow models={rows[0]} duration={64} onPick={onPickModel} />
-              <MarqueeRow models={rows[1]} duration={78} reverse onPick={onPickModel} />
+              <MarqueeRow models={rows[0]} duration={64} running={inView} onPick={onPickModel} />
+              <MarqueeRow models={rows[1]} duration={78} reverse running={inView} onPick={onPickModel} />
             </>
           )}
         </div>

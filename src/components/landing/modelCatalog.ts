@@ -8,7 +8,16 @@
  * 保证首页在任何环境下都能完整展示与试算。
  */
 
-export type ModelMode = 'text-to-video' | 'image-to-video' | 'text-to-image' | 'image-to-image'
+/**
+ * 生成模式。`video-to-video` 对应 `POST /v1/videos/generations` 的 `video_urls` 入参，
+ * 即以参考视频驱动的续写 / 风格重绘 / 运动迁移。
+ */
+export type ModelMode =
+  | 'text-to-video'
+  | 'image-to-video'
+  | 'video-to-video'
+  | 'text-to-image'
+  | 'image-to-image'
 
 export interface SalePricing {
   mode: ModelMode
@@ -37,6 +46,7 @@ export interface ModelSummary {
 export const MODE_LABEL: Record<ModelMode, string> = {
   'text-to-video': '文生视频',
   'image-to-video': '图生视频',
+  'video-to-video': '视频生视频',
   'text-to-image': '文生图',
   'image-to-image': '图生图',
 }
@@ -57,11 +67,11 @@ export const FALLBACK_MODELS: ModelSummary[] = [
     vendor: 'ByteDance',
     tagline: '电影级运镜与长镜头稳定性，适合成片级叙事',
     accent: '#4da3ff',
-    modes: ['text-to-video', 'image-to-video'],
+    modes: ['text-to-video', 'image-to-video', 'video-to-video'],
     resolutions: ['480p', '720p', '1080p'],
     durations: [4, 5, 6, 8, 10, 12, 15],
     ratios: ['16:9', '9:16', '1:1', '21:9'],
-    highlights: ['多镜头一致性', '物理运动自然', '首尾帧控制'],
+    highlights: ['多镜头一致性', '物理运动自然', '参考视频续写'],
     salePricing: [
       { mode: 'text-to-video', resolution: '480p', unit: 'second', price: 0.412, currency: 'USD' },
       { mode: 'text-to-video', resolution: '720p', unit: 'second', price: 0.686, currency: 'USD' },
@@ -69,6 +79,9 @@ export const FALLBACK_MODELS: ModelSummary[] = [
       { mode: 'image-to-video', resolution: '480p', unit: 'second', price: 0.446, currency: 'USD' },
       { mode: 'image-to-video', resolution: '720p', unit: 'second', price: 0.742, currency: 'USD' },
       { mode: 'image-to-video', resolution: '1080p', unit: 'second', price: 1.298, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '480p', unit: 'second', price: 0.483, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '720p', unit: 'second', price: 0.805, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '1080p', unit: 'second', price: 1.407, currency: 'USD' },
     ],
   },
   {
@@ -127,16 +140,18 @@ export const FALLBACK_MODELS: ModelSummary[] = [
     vendor: '快手',
     tagline: '人物动作与表情细腻，人像类内容表现突出',
     accent: '#f472b6',
-    modes: ['text-to-video', 'image-to-video'],
+    modes: ['text-to-video', 'image-to-video', 'video-to-video'],
     resolutions: ['720p', '1080p'],
     durations: [5, 10],
     ratios: ['16:9', '9:16', '1:1'],
-    highlights: ['人物动作自然', '面部一致性', '中文提示词友好'],
+    highlights: ['人物动作自然', '面部一致性', '动作迁移'],
     salePricing: [
       { mode: 'text-to-video', resolution: '720p', unit: 'second', price: 0.56, currency: 'USD' },
       { mode: 'text-to-video', resolution: '1080p', unit: 'second', price: 0.98, currency: 'USD' },
       { mode: 'image-to-video', resolution: '720p', unit: 'second', price: 0.63, currency: 'USD' },
       { mode: 'image-to-video', resolution: '1080p', unit: 'second', price: 1.05, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '720p', unit: 'second', price: 0.686, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '1080p', unit: 'second', price: 1.134, currency: 'USD' },
     ],
   },
   {
@@ -145,16 +160,18 @@ export const FALLBACK_MODELS: ModelSummary[] = [
     vendor: 'MiniMax',
     tagline: '动态幅度大，擅长夸张运动与镜头冲击力',
     accent: '#fb923c',
-    modes: ['text-to-video', 'image-to-video'],
+    modes: ['text-to-video', 'image-to-video', 'video-to-video'],
     resolutions: ['720p', '1080p'],
     durations: [6, 10],
     ratios: ['16:9', '9:16'],
-    highlights: ['大幅度运动', '镜头张力强', '风格化能力好'],
+    highlights: ['大幅度运动', '镜头张力强', '视频续写'],
     salePricing: [
       { mode: 'text-to-video', resolution: '720p', unit: 'second', price: 0.49, currency: 'USD' },
       { mode: 'text-to-video', resolution: '1080p', unit: 'second', price: 0.84, currency: 'USD' },
       { mode: 'image-to-video', resolution: '720p', unit: 'second', price: 0.532, currency: 'USD' },
       { mode: 'image-to-video', resolution: '1080p', unit: 'second', price: 0.91, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '720p', unit: 'second', price: 0.581, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '1080p', unit: 'second', price: 0.98, currency: 'USD' },
     ],
   },
   {
@@ -163,11 +180,11 @@ export const FALLBACK_MODELS: ModelSummary[] = [
     vendor: '阿里',
     tagline: '开源生态友好，风格迁移与控制项丰富',
     accent: '#22d3ee',
-    modes: ['text-to-video', 'image-to-video'],
+    modes: ['text-to-video', 'image-to-video', 'video-to-video'],
     resolutions: ['480p', '720p', '1080p'],
     durations: [4, 5, 8, 10],
     ratios: ['16:9', '9:16', '1:1'],
-    highlights: ['可控性强', '风格迁移', '性价比高'],
+    highlights: ['可控性强', '视频风格重绘', '性价比高'],
     salePricing: [
       { mode: 'text-to-video', resolution: '480p', unit: 'second', price: 0.28, currency: 'USD' },
       { mode: 'text-to-video', resolution: '720p', unit: 'second', price: 0.462, currency: 'USD' },
@@ -175,6 +192,9 @@ export const FALLBACK_MODELS: ModelSummary[] = [
       { mode: 'image-to-video', resolution: '480p', unit: 'second', price: 0.315, currency: 'USD' },
       { mode: 'image-to-video', resolution: '720p', unit: 'second', price: 0.504, currency: 'USD' },
       { mode: 'image-to-video', resolution: '1080p', unit: 'second', price: 0.875, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '480p', unit: 'second', price: 0.336, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '720p', unit: 'second', price: 0.539, currency: 'USD' },
+      { mode: 'video-to-video', resolution: '1080p', unit: 'second', price: 0.945, currency: 'USD' },
     ],
   },
   {

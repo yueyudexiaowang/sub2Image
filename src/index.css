@@ -1345,6 +1345,15 @@ html.dark ::selection {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/**
+ * 整屏板块：离屏时跳过渲染与绘制。
+ * 每屏高度固定为一个视口，占位尺寸精确，不会影响滚动条长度与吸附位置。
+ */
+.landing-page-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100svh;
+}
+
 /* 落地页面板：细滚动条，且不显示横向滚动条 */
 .landing-scroll {
   overflow-x: hidden;
