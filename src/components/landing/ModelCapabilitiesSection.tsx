@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { MODE_LABEL, type ModelMode, type ModelSummary } from './modelCatalog'
 
 interface ModelCapabilitiesSectionProps {
@@ -34,13 +34,13 @@ function ModelCard({ model, onPick }: { model: ModelSummary; onPick: () => void 
       type="button"
       onClick={onPick}
       style={{ '--accent': model.accent } as React.CSSProperties}
-      className="group relative flex h-44 w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f18]/80 p-5 text-left backdrop-blur-sm transition-[border-color,box-shadow,background-color] duration-300 hover:border-[color:var(--accent)] hover:bg-[#0d1420]/90 hover:shadow-[0_0_0_1px_var(--accent),0_18px_40px_-12px_var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      className="group relative flex h-44 w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f18] p-5 text-left transition-[border-color,box-shadow] duration-300 [contain:paint] hover:border-[color:var(--accent)] hover:shadow-[0_0_0_1px_var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
     >
-      {/* 霓虹光晕 */}
+      {/* 角落主色晕染：用径向渐变代替 blur 滤镜，避免跑马灯滚动时逐帧重绘 */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-25 blur-3xl transition-opacity duration-500 group-hover:opacity-60"
-        style={{ background: 'var(--accent)' }}
+        className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: 'radial-gradient(120px 100px at 100% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%)' }}
       />
       {/* 底部渐隐强调线 */}
       <span
@@ -52,7 +52,7 @@ function ModelCard({ model, onPick }: { model: ModelSummary; onPick: () => void 
       {/* 头部：厂商 */}
       <div className="relative flex items-center gap-2">
         <span
-          className="h-2 w-2 shrink-0 rounded-full transition-shadow duration-500 group-hover:shadow-[0_0_12px_3px_var(--accent)]"
+          className="h-2 w-2 shrink-0 rounded-full transition-shadow duration-300 group-hover:shadow-[0_0_10px_2px_var(--accent)]"
           style={{ background: model.accent }}
         />
         <span className="truncate text-[11px] uppercase tracking-[0.2em] text-zinc-500">{model.vendor}</span>
@@ -102,7 +102,7 @@ function MarqueeRow({
 }) {
   if (!models.length) return null
   return (
-    <div className="group/row relative overflow-x-clip py-3 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
+    <div className="group/row relative overflow-x-clip py-2 [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
       <div
         className="flex w-max gap-4 motion-safe:animate-[landing-marquee_linear_infinite] motion-safe:group-hover/row:[animation-play-state:paused]"
         style={{ animationDuration: `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' }}
@@ -126,7 +126,6 @@ export default function ModelCapabilitiesSection({
   onPickModel,
 }: ModelCapabilitiesSectionProps) {
   const [filter, setFilter] = useState<Filter>('all')
-  const sectionRef = useRef<HTMLElement>(null)
 
   const visible = useMemo(() => {
     if (filter === 'video') return models.filter(isVideoModel)
@@ -146,44 +145,29 @@ export default function ModelCapabilitiesSection({
       m.modes.forEach((mode) => modes.add(mode))
       m.resolutions.forEach((r) => resolutions.add(r))
     })
-    return [
-      { value: String(models.length), suffix: '个', label: '可用模型' },
-      { value: String(modes.size), suffix: '类', label: '生成模式' },
-      { value: String(resolutions.size), suffix: '档', label: '输出规格' },
-      { value: '1', suffix: '套', label: '统一接口' },
-    ]
-  }, [models])
+    // 全目录中按秒计费的最低单价，作为「起价」钩子
+    const perSecond = models.flatMap((m) => m.salePricing.filter((p) => p.unit === 'second').map((p) => p.price))
+    const floor = perSecond.length ? Math.min(...perSecond) : null
 
-  /** 鼠标跟随的聚光灯 */
-  const onMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    const el = sectionRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    el.style.setProperty('--mx', `${e.clientX - rect.left}px`)
-    el.style.setProperty('--my', `${e.clientY - rect.top}px`)
-  }
+    const list: { value: string; unit: string; label: string; desc: string; accent?: boolean }[] = [
+      { value: String(models.length), unit: '个', label: '可用模型', desc: '视频 + 图像，持续接入' },
+      { value: String(modes.size), unit: '类', label: '生成模式', desc: '文生 / 图生自由切换' },
+      { value: String(resolutions.size), unit: '档', label: '输出规格', desc: '480p 起，最高 4K' },
+      ...(floor !== null
+        ? [{ value: `$${floor.toFixed(3)}`, unit: '/秒', label: '最低起价', desc: '按秒计费，用多少付多少', accent: true }]
+        : []),
+    ]
+    return list
+  }, [models])
 
   return (
     <section
-      ref={sectionRef}
       id="models"
       data-snap-page
-      onMouseMove={onMouseMove}
       className="relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(120%_100%_at_50%_-10%,#12386b_0%,#08203f_35%,#040a16_68%,#000_100%)]"
       aria-label="模型能力"
     >
-      {/* 网格底纹 */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(255,255,255,.28)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.28)_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(80%_70%_at_50%_35%,#000,transparent)]"
-      />
-      {/* 聚光灯 */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(320px_320px_at_var(--mx,50%)_var(--my,40%),rgba(77,163,255,.22),transparent_70%)]"
-      />
-
-      <div className="relative z-10 flex h-full flex-col justify-center gap-6 py-20">
+      <div className="relative z-10 flex h-full flex-col justify-center gap-5 py-16">
         <header className="px-6 md:px-12">
           <p className="text-sm uppercase tracking-[0.3em] text-sky-400/80">Model Capabilities</p>
           <h2 className="mt-3 text-4xl font-medium tracking-tight text-white md:text-6xl">
@@ -231,27 +215,28 @@ export default function ModelCapabilitiesSection({
           )}
         </div>
 
-        {/* 统计条：一整条分隔式指标带 */}
+        {/* 统计条：无边框社论式指标行，靠细分隔线区隔 */}
         <div className="px-6 md:px-12">
-          <dl className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent backdrop-blur-sm md:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-y-6 border-t border-white/10 pt-6 md:grid-cols-4">
             {stats.map((s, i) => (
               <div
                 key={s.label}
-                className={`group/stat relative flex items-baseline gap-3 px-5 py-4 transition-colors duration-300 hover:bg-white/[0.05] ${
-                  i > 0 ? 'border-white/8 md:border-l' : ''
-                } ${i === 1 ? 'border-l border-white/8' : ''} ${i >= 2 ? 'border-t border-white/8 md:border-t-0' : ''}`}
+                className={`flex flex-col gap-1.5 px-1 md:px-6 ${i > 0 ? 'md:border-l md:border-white/10' : ''} ${
+                  i % 2 === 1 ? 'border-l border-white/10 pl-5 md:pl-6' : ''
+                }`}
               >
-                <dd className="font-mono text-3xl leading-none text-white tabular-nums">
-                  {s.value}
-                  <span className="ml-0.5 align-super text-[10px] text-sky-400/70">{s.suffix}</span>
+                <dt className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">{s.label}</dt>
+                <dd className="flex items-baseline gap-1">
+                  <span
+                    className={`font-mono text-[2.25rem] font-light leading-none tabular-nums ${
+                      s.accent ? 'text-sky-300' : 'text-white'
+                    }`}
+                  >
+                    {s.value}
+                  </span>
+                  <span className={`text-xs ${s.accent ? 'text-sky-400/70' : 'text-zinc-500'}`}>{s.unit}</span>
                 </dd>
-                <dt className="text-xs uppercase tracking-[0.16em] text-zinc-500 transition-colors duration-300 group-hover/stat:text-zinc-300">
-                  {s.label}
-                </dt>
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-5 bottom-0 h-px scale-x-0 bg-gradient-to-r from-sky-400/70 to-transparent transition-transform duration-500 group-hover/stat:scale-x-100"
-                />
+                <p className="text-[11px] leading-relaxed text-zinc-600">{s.desc}</p>
               </div>
             ))}
           </dl>

@@ -123,10 +123,9 @@ export default function PricingSection({
 
   const lineItems = pricing
     ? [
-        { label: `单价（${UNIT_LABEL[pricing.unit]}）`, value: formatUsd(pricing.price) },
+        { label: `计费单位`, value: UNIT_LABEL[pricing.unit] },
         ...(perSecond ? [{ label: '时长', value: `${billedDuration} 秒` }] : []),
         { label: '单条小计', value: formatUsd(unitTotal) },
-        { label: '数量', value: `× ${quantity}` },
       ]
     : []
 
@@ -137,11 +136,6 @@ export default function PricingSection({
       className="relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(110%_90%_at_80%_0%,#0d2a4d_0%,#07172c_40%,#03080f_72%,#000_100%)]"
       aria-label="定价"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,.3)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.3)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(70%_60%_at_60%_40%,#000,transparent)]"
-      />
-
       <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-4 px-6 pb-10 pt-24 md:px-12">
         <header>
           <p className="text-sm uppercase tracking-[0.3em] text-sky-400/80">Pricing</p>
@@ -305,16 +299,37 @@ export default function PricingSection({
               <div className="relative mt-auto border-t border-white/10 pt-5">
                 {pricing ? (
                   <>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">预计总价</p>
+                    {/* 主角：单价（每秒 / 每张），最低门槛先说清楚 */}
+                    <p className="text-xs uppercase tracking-[0.2em] text-sky-400/80">
+                      {perSecond ? '低至每秒' : '低至每张'}
+                    </p>
                     <p
-                      key={`${model.id}-${mode}-${resolution}-${billedDuration}-${quantity}`}
-                      className="mt-1 font-mono text-5xl leading-none text-white motion-safe:animate-[landing-price-pulse_.35s_ease-out_both]"
+                      key={`${model.id}-${mode}-${resolution}`}
+                      className="mt-1 flex items-baseline gap-1.5 motion-safe:animate-[landing-price-pulse_.35s_ease-out_both]"
                     >
-                      {formatUsd(total)}
+                      <span className="font-mono text-5xl leading-none text-white">{formatUsd(pricing.price)}</span>
+                      <span className="text-base text-zinc-500">{perSecond ? '/秒' : '/张'}</span>
                     </p>
-                    <p className="mt-1.5 font-mono text-sm text-zinc-500">
-                      ≈ ¥{round3(total * EXCHANGE_RATE).toFixed(2)} · 汇率 {EXCHANGE_RATE}
+                    <p className="mt-1.5 font-mono text-xs text-zinc-500">
+                      ≈ ¥{round3(pricing.price * EXCHANGE_RATE).toFixed(2)} {perSecond ? '每秒' : '每张'} · 汇率{' '}
+                      {EXCHANGE_RATE}
                     </p>
+
+                    {/* 配角：当前配置的合计 */}
+                    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5">
+                      <span className="text-xs text-zinc-500">
+                        本次{perSecond ? ` ${billedDuration}秒` : ''} × {quantity} 合计
+                      </span>
+                      <span
+                        key={`${model.id}-${mode}-${resolution}-${billedDuration}-${quantity}`}
+                        className="font-mono text-lg text-white motion-safe:animate-[landing-price-pulse_.3s_ease-out_both]"
+                      >
+                        {formatUsd(total)}
+                        <span className="ml-1.5 text-[11px] text-zinc-500">
+                          ≈¥{round3(total * EXCHANGE_RATE).toFixed(2)}
+                        </span>
+                      </span>
+                    </div>
                   </>
                 ) : (
                   <p className="text-sm text-amber-400/80">该模型暂未开放此组合的定价，请更换模式或分辨率。</p>
