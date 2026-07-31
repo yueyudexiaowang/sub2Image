@@ -1318,3 +1318,29 @@ html.dark ::selection {
   background: rgba(184, 196, 207, 0.3);
   color: inherit;
 }
+
+/* ===== 落地页动效 ===== */
+
+/* 内容淡入上移（精选集详情切换） */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 模型跑马灯：两份相同内容首尾相接，位移一半即可无缝循环 */
+@keyframes landing-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(calc(-50% - 0.5rem), 0, 0); }
+}
+
+/* 工具卡片入场 */
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 定价数字跳动时的高亮脉冲 */
+@keyframes landing-price-pulse {
+  0%   { opacity: 0.35; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createScope, createTimeline, stagger } from 'animejs'
+import ModelCapabilitiesSection from './landing/ModelCapabilitiesSection'
+import CreativeToolsSection from './landing/CreativeToolsSection'
+import PricingSection from './landing/PricingSection'
+import { FALLBACK_MODELS, fetchModelCatalog, type ModelSummary } from './landing/modelCatalog'
 
 interface LandingPageProps {
   onEnter: () => void
@@ -143,7 +147,13 @@ const pickGalleryVideos = (prev: string[] = []) => {
   return ids
 }
 
-const navLinks = ['概览', '模型能力', '创作工具', '定价']
+/** 顶部导航锚点：原有内容归为「概览」，其后每个功能各占一页 */
+const navLinks: { label: string; target: string }[] = [
+  { label: '概览', target: 'overview' },
+  { label: '模型能力', target: 'models' },
+  { label: '创作工具', target: 'tools' },
+  { label: '定价', target: 'pricing' },
+]
 
 /**
  * 精选集作品，上下按钮循环切换（复刻 Flow Sessions）。
@@ -192,6 +202,15 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
    * ringIndex 累计增减，整个圆环持续朝同一方向旋转，把下一张卡转到焦点位。
    */
   const [ringIndex, setRingIndex] = useState(0)
+  /** 模型目录：优先读接口，失败回退内置示例 */
+  const [catalog, setCatalog] = useState<{ models: ModelSummary[]; fallback: boolean; loading: boolean }>({
+    models: FALLBACK_MODELS,
+    fallback: true,
+    loading: true,
+  })
+  const [pricingModelId, setPricingModelId] = useState(FALLBACK_MODELS[0].id)
+  /** 当前处于视口内的锚点，用于导航高亮 */
+  const [activeAnchor, setActiveAnchor] = useState('overview')
   const RING_SLOTS = featuredWorks.length * 2 // 3 组作品重复两遍 = 6 个卡位，环形更饱满
   const SLOT_ANGLE = 360 / RING_SLOTS
   const RING_RADIUS = 640
@@ -297,6 +316,54 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
     }
   }, [])
 
+  /** 拉取模型目录 */
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetchModelCatalog(controller.signal).then((res) => {
+      if (controller.signal.aborted) return
+      setCatalog({ models: res.models, fallback: res.fallback, loading: false })
+      setPricingModelId((prev) => (res.models.some((m) => m.id === prev) ? prev : res.models[0].id))
+    })
+    return () => controller.abort()
+  }, [])
+
+  /** 观察新增的锚点区块，高亮当前导航项 */
+  useEffect(() => {
+    const page = pageRef.current
+    if (!page) return
+    const targets = ['overview', 'models', 'tools', 'pricing']
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el))
+    if (!targets.length) return
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (hit?.target.id) setActiveAnchor(hit.target.id)
+      },
+      { root: page, threshold: [0.35, 0.6] },
+    )
+    targets.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [])
+
+  /** 导航锚点：滚动到对应板块顶部（减去固定头部高度） */
+  const scrollToAnchor = (id: string) => {
+    const page = pageRef.current
+    const target = document.getElementById(id)
+    if (!page || !target) return
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    page.scrollTo({ top: Math.max(target.offsetTop, 0), behavior })
+  }
+
+  /** 从模型能力页点某个模型：带着它跳到定价试算 */
+  const pickModelAndQuote = (id: string) => {
+    setPricingModelId(id)
+    scrollToAnchor('pricing')
+  }
+
   /** 点击 Tab：平滑滚动到对应阶段，由滚动进度同步选中状态 */
   const scrollToStage = (idx: number) => {
     const page = pageRef.current
@@ -329,10 +396,19 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
 
           <ul className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
-              <li key={link}>
-                <span className="cursor-default text-sm text-zinc-400 transition-colors hover:text-white">
-                  {link}
-                </span>
+              <li key={link.target}>
+                <button
+                  type="button"
+                  onClick={() => scrollToAnchor(link.target)}
+                  aria-current={activeAnchor === link.target ? 'true' : undefined}
+                  className={`relative text-sm transition-colors after:absolute after:-bottom-1.5 after:left-0 after:h-px after:bg-white after:transition-all after:duration-300 ${
+                    activeAnchor === link.target
+                      ? 'text-white after:w-full'
+                      : 'text-zinc-400 after:w-0 hover:text-white hover:after:w-full'
+                  }`}
+                >
+                  {link.label}
+                </button>
               </li>
             ))}
           </ul>
@@ -348,7 +424,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       </header>
 
       {/* Hero：图片瀑布墙 + 叠加内容 */}
-      <section className="relative flex min-h-svh snap-start flex-col overflow-hidden pt-16">
+      <section id="overview" className="relative flex min-h-svh snap-start flex-col overflow-hidden pt-16">
         {/* 瀑布墙背景 */}
         <div ref={wallRef} className="absolute inset-0 top-16" aria-hidden="true">
           <div className="flex h-full flex-col gap-2 p-2">
@@ -423,7 +499,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
               >
                 My Jarvis 订阅服务
               </a>
-              ，生成、编辑与 Agent 创作链路合而为一。
+              ，生成、编辑与 Agent 创作链路合而���一。
             </p>
             <p>功能可能因订阅等级与平台（Web 与移动端）而异。</p>
           </div>
@@ -444,10 +520,10 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
       </section>
 
       {/* 能力区：滚动固定切换（复刻 Flow Capabilities） */}
-      <section ref={capsTrackRef} className="relative h-[450vh] snap-start" aria-label="模型能力">
+      <section ref={capsTrackRef} className="relative h-[450vh] snap-start" aria-label="创作流程">
         <div className="sticky top-0 flex h-svh flex-col overflow-hidden [background:radial-gradient(120%_100%_at_50%_115%,#1a4a8a_0%,#0c2a55_38%,#050d1c_70%,#000_100%)]">
           {/* 区块标题 */}
-          <p className="pt-24 text-center text-lg text-zinc-400">模型能力</p>
+          <p className="pt-24 text-center text-lg text-zinc-400">创作流程</p>
 
           {/* 超大阶段词（常驻挂载，交叉淡入淡出） */}
           <div className="relative z-10 mt-2 h-[1.1em] px-6 text-5xl font-medium leading-none tracking-tight sm:text-6xl md:px-12 md:text-8xl">
@@ -771,6 +847,27 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
           </div>
         </div>
       </section>
+
+      {/* ===== 模型能力（独立一页） ===== */}
+      <ModelCapabilitiesSection
+        models={catalog.models}
+        loading={catalog.loading}
+        fallback={catalog.fallback}
+        onPickModel={pickModelAndQuote}
+      />
+
+      {/* ===== 创作工具（独立一页） ===== */}
+      <CreativeToolsSection onEnter={onEnter} />
+
+      {/* ===== 定价试算（独立一页） ===== */}
+      <PricingSection
+        models={catalog.models}
+        loading={catalog.loading}
+        fallback={catalog.fallback}
+        selectedId={pricingModelId}
+        onSelectId={setPricingModelId}
+        onEnter={onEnter}
+      />
 
       {/* 页脚 */}
       <footer className="snap-end border-t border-white/10 bg-black py-10">
