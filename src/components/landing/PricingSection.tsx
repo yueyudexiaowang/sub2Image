@@ -60,16 +60,16 @@ function OptionRow<T extends string | number>({
 }) {
   if (!options.length) return null
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</span>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {options.map((opt) => (
           <button
             key={String(opt)}
             type="button"
             onClick={() => onChange(opt)}
             aria-pressed={opt === value}
-            className={`rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 active:scale-95 ${
+            className={`rounded-lg border px-2.5 py-1 text-[13px] transition-all duration-200 active:scale-95 ${
               opt === value
                 ? 'border-sky-400 bg-sky-400/15 text-white'
                 : 'border-white/12 text-zinc-400 hover:border-white/35 hover:text-white'
@@ -78,6 +78,51 @@ function OptionRow<T extends string | number>({
             {render ? render(opt) : String(opt)}
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 时长滑块。
+ * 各模型只支持离散档位（如 4/5/6/8/10s），因此 range 的取值是档位下标，
+ * 拖动时自然吸附到合法档位，不会出现接口不接受的中间值。
+ */
+function DurationSlider({
+  durations,
+  value,
+  onChange,
+}: {
+  durations: number[]
+  value: number
+  onChange: (v: number) => void
+}) {
+  if (!durations.length) return null
+  const index = Math.max(0, durations.indexOf(value))
+  const last = durations.length - 1
+  const pct = last > 0 ? (index / last) * 100 : 100
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">时长</span>
+        <span className="font-mono text-sm tabular-nums text-white">{value}s</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={last}
+        step={1}
+        value={index}
+        onChange={(e) => onChange(durations[Number(e.target.value)])}
+        aria-label="时长"
+        aria-valuetext={`${value} 秒`}
+        style={{ '--pct': `${pct}%` } as React.CSSProperties}
+        className="landing-range"
+      />
+      <div className="flex justify-between font-mono text-[10px] tabular-nums text-zinc-600">
+        <span>{durations[0]}s</span>
+        <span>{durations[last]}s</span>
       </div>
     </div>
   )
@@ -137,7 +182,8 @@ export default function PricingSection({
     <section
       id="pricing"
       data-snap-page
-      className="landing-page-section relative flex h-svh snap-start scroll-mt-16 flex-col overflow-hidden [background:radial-gradient(110%_90%_at_80%_0%,#0d2a4d_0%,#07172c_40%,#03080f_72%,#000_100%)]"
+      /* 窄屏放开高度让内容自然展开，避免面板内出现滚动条或被裁切；宽屏才锁定整屏 */
+      className="landing-page-section relative flex min-h-svh snap-start scroll-mt-16 flex-col overflow-hidden lg:h-svh [background:radial-gradient(110%_90%_at_80%_0%,#0d2a4d_0%,#07172c_40%,#03080f_72%,#000_100%)]"
       aria-label="定价"
     >
       <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-4 px-6 pb-10 pt-24 md:px-12">
@@ -157,11 +203,14 @@ export default function PricingSection({
         ) : (
           <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[1fr_20rem] lg:grid-cols-[1fr_22rem]">
             {/* 左：参数配置 */}
-            {/* 不用 backdrop-blur：近 30 万像素的毛玻璃会在每个滚动帧重采样背景，是掉帧主因 */}
-            <div className="landing-scroll flex min-h-0 flex-col gap-5 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
-              <div className="flex flex-col gap-2">
+            {/*
+              面板内不出现滚动条：所有参数一屏排布，靠紧凑的胶囊尺寸与时长滑块压缩高度。
+              不用 backdrop-blur：近 30 万像素的毛玻璃会在每个滚动帧重采样背景，是掉帧主因。
+            */}
+            <div className="flex min-h-0 flex-col justify-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6 lg:overflow-hidden">
+              <div className="flex flex-col gap-1.5">
                 <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">模型</span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {models.map((m) => (
                     <button
                       key={m.id}
@@ -169,7 +218,7 @@ export default function PricingSection({
                       onClick={() => onSelectId(m.id)}
                       aria-pressed={m.id === model.id}
                       style={{ '--accent': m.accent } as React.CSSProperties}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 active:scale-95 ${
+                      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[13px] transition-all duration-200 active:scale-95 ${
                         m.id === model.id
                           ? 'border-[color:var(--accent)] bg-[color:var(--accent)]/15 text-white'
                           : 'border-white/12 text-zinc-400 hover:border-white/35 hover:text-white'
@@ -182,7 +231,7 @@ export default function PricingSection({
                 </div>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                 <OptionRow
                   label="生成模式"
                   options={model.modes}
@@ -192,23 +241,15 @@ export default function PricingSection({
                 />
                 <OptionRow label="分辨率" options={model.resolutions} value={resolution} onChange={setResolution} />
                 <OptionRow label="画面比例" options={model.ratios} value={ratio} onChange={setRatio} />
-                {isVideo && (
-                  <OptionRow
-                    label={`时长（${MIN_DURATION}-${MAX_DURATION} 秒）`}
-                    options={model.durations}
-                    value={duration}
-                    onChange={setDuration}
-                    render={(d) => `${d}s`}
-                  />
-                )}
+                {isVideo && <DurationSlider durations={model.durations} value={duration} onChange={setDuration} />}
               </div>
 
               {/* 数量 */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">数量</span>
                 <div className="flex flex-wrap items-center gap-3">
                   {/* 一体化步进器 */}
-                  <div className="inline-flex h-10 items-center overflow-hidden rounded-lg border border-white/12 bg-white/[0.04]">
+                  <div className="inline-flex h-9 items-center overflow-hidden rounded-lg border border-white/12 bg-white/[0.04]">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -236,7 +277,7 @@ export default function PricingSection({
                     </button>
                   </div>
                   {/* 快捷档位 */}
-                  <div className="inline-flex h-10 items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-1">
+                  <div className="inline-flex h-9 items-center gap-1 rounded-lg border border-white/8 bg-white/[0.02] p-1">
                     {[1, 4, 10].map((n) => (
                       <button
                         key={n}

@@ -1349,9 +1349,12 @@ html.dark ::selection {
  * 整屏板块：离屏时跳过渲染与绘制。
  * 每屏高度固定为一个视口，占位尺寸精确，不会影响滚动条长度与吸附位置。
  */
-.landing-page-section {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 100svh;
+/* 仅在宽屏生效：窄屏板块高度会超过一屏，占位尺寸失准反而会让滚动条跳动 */
+@media (min-width: 1024px) {
+  .landing-page-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100svh;
+  }
 }
 
 /* 落地页面板：细滚动条，且不显示横向滚动条 */
@@ -1367,3 +1370,69 @@ html.dark ::selection {
   border-radius: 999px;
 }
 .landing-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+/**
+ * 落地页时长滑块。
+ * 已填充部分通过 --pct 变量用渐变绘制在轨道上，避免额外的覆盖层元素。
+ */
+.landing-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 1.25rem;
+  background: transparent;
+  cursor: grab;
+}
+.landing-range:active { cursor: grabbing; }
+
+.landing-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #38bdf8 0%,
+    #38bdf8 var(--pct, 0%),
+    rgba(255, 255, 255, 0.12) var(--pct, 0%),
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+.landing-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.landing-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #38bdf8;
+}
+
+.landing-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  margin-top: -5px; /* (14 - 4) / 2，让滑块在轨道上垂直居中 */
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid #0ea5e9;
+  box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.landing-range::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid #0ea5e9;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.landing-range:hover::-webkit-slider-thumb { transform: scale(1.15); }
+.landing-range:hover::-moz-range-thumb { transform: scale(1.15); }
+.landing-range:focus-visible { outline: none; }
+.landing-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35);
+}
+.landing-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35);
+}
