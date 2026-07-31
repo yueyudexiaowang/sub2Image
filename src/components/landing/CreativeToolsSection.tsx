@@ -80,41 +80,15 @@ const tools: Tool[] = [
 ]
 
 function ToolCard({ tool, index, onEnter }: { tool: Tool; index: number; onEnter: () => void }) {
-  const ref = useRef<HTMLButtonElement>(null)
-
-  /** 卡片跟随鼠标的轻微 3D 倾斜 */
-  const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const el = ref.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const px = (e.clientX - rect.left) / rect.width
-    const py = (e.clientY - rect.top) / rect.height
-    el.style.setProperty('--rx', `${(0.5 - py) * 8}deg`)
-    el.style.setProperty('--ry', `${(px - 0.5) * 10}deg`)
-    el.style.setProperty('--mx', `${px * 100}%`)
-    el.style.setProperty('--my', `${py * 100}%`)
-  }
-
-  const onLeave = () => {
-    const el = ref.current
-    if (!el) return
-    el.style.setProperty('--rx', '0deg')
-    el.style.setProperty('--ry', '0deg')
-  }
-
   return (
     <button
-      ref={ref}
       type="button"
       onClick={onEnter}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
       style={{
         '--accent': tool.accent,
         animationDelay: `${index * 70}ms`,
-        transform: 'perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg))',
       } as React.CSSProperties}
-      className={`group relative flex min-h-[7.5rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 p-5 text-left transition-[border-color,box-shadow,transform] duration-300 hover:border-[color:var(--accent)] hover:shadow-[0_0_40px_-8px_var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:animate-[landing-rise_.6s_cubic-bezier(.16,1,.3,1)_both] ${tool.span}`}
+      className={`group relative flex min-h-[7.5rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 p-5 text-left transition-[border-color,box-shadow] duration-300 [contain:paint] hover:border-[color:var(--accent)] hover:shadow-[0_0_0_1px_var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:animate-[landing-rise_.6s_cubic-bezier(.16,1,.3,1)_both] ${tool.span}`}
     >
       <img
         src={tool.cover || '/placeholder.svg'}
@@ -124,10 +98,10 @@ function ToolCard({ tool, index, onEnter }: { tool: Tool; index: number; onEnter
         className="absolute inset-0 h-full w-full scale-105 object-cover opacity-45 transition-all duration-700 group-hover:scale-110 group-hover:opacity-70"
       />
       <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
-      {/* 鼠标位置的高光 */}
+      {/* 悬停时的主色高光（固定位置，避免逐帧重绘） */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 [background:radial-gradient(260px_200px_at_var(--mx,50%)_var(--my,50%),color-mix(in_srgb,var(--accent)_28%,transparent),transparent_70%)]"
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 [background:radial-gradient(260px_200px_at_20%_100%,color-mix(in_srgb,var(--accent)_28%,transparent),transparent_70%)]"
       />
 
       <div className="relative">
@@ -198,7 +172,7 @@ export default function CreativeToolsSection({ onEnter }: CreativeToolsSectionPr
               <span className="text-balance">生成之后，才是创作的开始</span>
             </h2>
             <p className="mt-2 max-w-2xl text-pretty leading-relaxed text-zinc-400">
-              图片、视频、音频工具全部内置在同一个工作台。素材不用来回导出导入，一条链路走到成片。
+              图片、视频、音频工具全部内置在同一个工作台。素材不用��回导出导入，一条链路走到成片。
             </p>
           </div>
           <button
